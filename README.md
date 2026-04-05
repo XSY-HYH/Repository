@@ -2,7 +2,7 @@
 
 > A project born out of sheer boredom.
 >
-> **简体中文**: [README-zh.md](./README-zh.md) | 本项目是一个功能完善的跨平台文件服务器，基于 ASP.NET Core 构建。
+> **简体中文**: [README-zh.md](./README-zh.md) | 一个闲得蛋疼诞生的项目，基于 ASP.NET Core 构建。
 
 A feature-rich cross-platform file server built on ASP.NET Core, providing file browsing, preview, upload, download, and various security protection mechanisms.
 
