@@ -1,5 +1,7 @@
 # Repository - File Server
 
+> A project born out of sheer boredom.
+>
 > **简体中文**: [README-zh.md](./README-zh.md) | 本项目是一个功能完善的跨平台文件服务器，基于 ASP.NET Core 构建。
 
 A feature-rich cross-platform file server built on ASP.NET Core, providing file browsing, preview, upload, download, and various security protection mechanisms.
@@ -26,7 +28,7 @@ Two protection modes are supported:
 - Suitable for general scenarios, simple client implementation
 - SHA256 hash verification support
 
-#### Secure Mode (Advanced Security Mode)
+#### Secure Mode (I think it's the worst and most useless design. You'd better not turn on that option, because you might never need it.)
 - RSA + AES hybrid encryption
 - Mutual authentication
 - Anti-replay attack (Nonce + Timestamp)
