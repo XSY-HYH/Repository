@@ -259,6 +259,7 @@ namespace Repository
                 {
                     urls = args[0];
                     logger.LogInfo(I18nService.Instance.T("listen.info", urls));
+                    ConsoleANSI.ConsoleAnsiArtist.PrintAnsiText("R E P O");
                     app.Run(urls);
                 }
                 else
@@ -380,6 +381,8 @@ namespace Repository
                         
                         lifetime.StopApplication();
                     };
+                    
+                    ConsoleANSI.ConsoleAnsiArtist.PrintAnsiText("R E P O");
                     
                     app.Run();
                 }

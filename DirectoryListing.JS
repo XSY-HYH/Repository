@@ -30,7 +30,7 @@ function getCurrentPath() {
         try {
             path = decodeURIComponent(path);
         } catch (err) {
-            console.warn('路径解码失败:', path);
+            console.warn(t('path_decode_failed') + ':', path);
         }
     }
     
@@ -41,7 +41,7 @@ function loadFileList() {
     const currentPath = getCurrentPath();
     
     const titleElement = document.querySelector('h1');
-    titleElement.textContent = 'Directory listing for /' + (currentPath || '');
+    titleElement.textContent = t('directory_for') + ' /' + (currentPath || '');
     
     let apiUrl = '/api/files';
     if (currentPath) {
@@ -51,7 +51,7 @@ function loadFileList() {
     fetch(apiUrl)
         .then(response => {
             if (!response.ok) {
-                throw new Error('HTTP状态码: ' + response.status);
+                throw new Error('HTTP: ' + response.status);
             }
             return response.json();
         })
@@ -62,7 +62,7 @@ function loadFileList() {
             
             const isEmpty = (data.directories.length === 0 && data.files.length === 0);
             if (isEmpty) {
-                tbody.innerHTML = '<tr><td colspan="3" class="empty">空目录</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="empty">' + t('empty_directory') + '</td></tr>';
                 return;
             }
            
@@ -107,16 +107,12 @@ function loadFileList() {
                     const row = document.createElement('tr');
                     const fileSize = file.size ? formatFileSize(file.size) : '-';
                     
-                 
                     const getDownloadUrl = async (filePath) => {
                         try {
-                            // 使用当前时间戳作为缓存破坏参数
                             const timestamp = Date.now();
-                          
                             return `/api/download/${encodeURIComponent(filePath)}?_t=${timestamp}`;
-                                                                                //这里会加时间戳
                         } catch (error) {
-                            console.error('获取下载链接失败:', error);
+                            console.error(t('get_link_failed') + ':', error);
                             return null;
                         }
                     };
@@ -126,36 +122,32 @@ function loadFileList() {
                     link.className = 'file';
                     link.textContent = file.name;
                     
-                    // 点击下载链接时强制下载并添加缓存破坏参数
                     link.onclick = async function(e) {
                         e.preventDefault();
                         const downloadUrl = await getDownloadUrl(file.url);
                         if (downloadUrl) {
-                            // 创建iframe（隐藏）来触发下载，确保不会缓存
                             const iframe = document.createElement('iframe');
                             iframe.style.display = 'none';
                             iframe.src = downloadUrl;
                             document.body.appendChild(iframe);
                             
-                            // 移除iframe
                             setTimeout(() => {
                                 document.body.removeChild(iframe);
                             }, 5000);
                         } else {
-                            alert('获取下载链接失败，请稍后重试');
+                            alert(t('get_link_failed'));
                         }
                     };
                     
                     const copyButton = document.createElement('button');
                     copyButton.className = 'copy-btn';
                     copyButton.textContent = '📋';
-                    copyButton.title = '复制下载链接';
+                    copyButton.title = t('copy_link');
                     copyButton.onclick = async function() {
                         const downloadUrl = await getDownloadUrl(file.url);
                         if (downloadUrl) {
                             copyDownloadLink(downloadUrl, this);
                         } else {
-                            // 显示复制失败状态
                             const originalText = this.textContent;
                             this.textContent = '❌';
                             this.style.background = '#dc3545';
@@ -172,8 +164,8 @@ function loadFileList() {
                     if (file.previewable) {
                         const previewButton = document.createElement('button');
                         previewButton.className = 'preview-btn';
-                        previewButton.textContent = '预览';
-                        previewButton.title = '预览文件';
+                        previewButton.textContent = t('preview');
+                        previewButton.title = t('preview');
                         previewButton.onclick = function() {
                             previewFile(file.url, file.name);
                         };
@@ -197,10 +189,10 @@ function loadFileList() {
             }
         })
         .catch(error => {
-            console.error('文件列表加载失败:', error);
+            console.error(t('file_list_load_failed') + ':', error);
             
             const tbody = document.getElementById('fileList');
-            tbody.innerHTML = '<tr><td colspan="3" class="empty">加载失败，请稍后重试</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="empty">' + t('load_failed') + '</td></tr>';
         });
 }
 
@@ -252,7 +244,7 @@ function copyDownloadLink(url, buttonElement) {
             
             updateButtonStatus(successful);
         } catch (err) {
-            console.error('复制失败:', err);
+            console.error(t('copy_failed') + ':', err);
             updateButtonStatus(false);
         }
     }
@@ -272,6 +264,7 @@ function previewFile(fileUrl, fileName) {
     title.textContent = fileName;
 
     loading.style.display = 'block';
+    loading.textContent = t('loading_content');
     content.style.display = 'none';
     error.style.display = 'none';
 
@@ -299,7 +292,7 @@ function previewFile(fileUrl, fileName) {
     fetch(previewApiUrl)
         .then(response => {
             if (!response.ok) {
-                throw new Error('HTTP状态码: ' + response.status);
+                throw new Error('HTTP: ' + response.status);
             }
 
             const contentType = response.headers.get('content-type');
@@ -347,7 +340,7 @@ function previewFile(fileUrl, fileName) {
                     const a = document.createElement('a');
                     a.href = objectUrl;
                     a.download = fileName;
-                    a.textContent = '下载文件';
+                    a.textContent = t('download_file');
                     a.className = 'btn btn-primary';
                     content.appendChild(a);
                 }
@@ -360,11 +353,11 @@ function previewFile(fileUrl, fileName) {
             }
         })
         .catch(err => {
-            console.error('预览文件失败:', err);
+            console.error(t('preview_failed') + ':', err);
 
             loading.style.display = 'none';
 
             error.style.display = 'block';
-            error.textContent = '预览失败: ' + (err.message || '未知错误');
+            error.textContent = t('preview_failed') + ': ' + (err.message || t('unknown_error'));
         });
 }

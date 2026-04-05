@@ -4,7 +4,8 @@
 >
 > **简体中文**: [README-zh.md](./README-zh.md) | 一个闲得蛋疼诞生的项目，基于 ASP.NET Core 构建。
 
-A feature-rich cross-platform file server built on ASP.NET Core, providing file browsing, preview, upload, download, and various security protection mechanisms.
+A project born out of sheer boredom, built on ASP.NET Core. You'll probably never use it in your lifetime.  
+I just wanted to prove it could be done—but it's definitely not something you'd actually use.
 
 ## Core Features
 
@@ -17,7 +18,7 @@ A feature-rich cross-platform file server built on ASP.NET Core, providing file 
 ### Security Protection
 - **IP Filtering**: Whitelist mode, only allow specified IPs to access
 - **Blacklist Mechanism**: Path blacklist to block access to sensitive directories
-- **DDoS Protection**: Limit request frequency per IP to prevent malicious attacks
+- **DDoS Protection**: Limit request frequency per IP to prevent malicious attacks(Not very useful.)
 - **Path Security**: Prevent directory traversal attacks, ensure access scope is limited
 
 ### Directory Protection

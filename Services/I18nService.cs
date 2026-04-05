@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -260,6 +261,40 @@ namespace Repository.Services
         public string CurrentLanguage => _currentLanguage;
         
         public IEnumerable<string> AvailableLanguages => _translations.Keys;
+        
+        public string GetWebTranslationsJson()
+        {
+            var webTranslations = new Dictionary<string, string>();
+            
+            if (_translations.TryGetValue(_currentLanguage, out var langTranslations))
+            {
+                foreach (var kvp in langTranslations)
+                {
+                    if (kvp.Key.StartsWith("web."))
+                    {
+                        var webKey = kvp.Key.Substring(4);
+                        webTranslations[webKey] = kvp.Value;
+                    }
+                }
+            }
+            
+            if (_currentLanguage != "en" && _translations.TryGetValue("en", out var enTranslations))
+            {
+                foreach (var kvp in enTranslations)
+                {
+                    if (kvp.Key.StartsWith("web."))
+                    {
+                        var webKey = kvp.Key.Substring(4);
+                        if (!webTranslations.ContainsKey(webKey))
+                        {
+                            webTranslations[webKey] = kvp.Value;
+                        }
+                    }
+                }
+            }
+            
+            return JsonSerializer.Serialize(webTranslations);
+        }
     }
     
     public static class I18nExtensions

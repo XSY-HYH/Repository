@@ -95,6 +95,23 @@ namespace Repository.Controllers
             var displayPath = string.IsNullOrEmpty(path) ? "/" : path;
             html = html.Replace("{{currentPath}}", displayPath);
             
+            var i18n = I18nService.Instance;
+            var webTranslations = i18n.GetWebTranslationsJson();
+            
+            html = html.Replace("{{lang}}", i18n.CurrentLanguage);
+            html = html.Replace("{{title}}", i18n.T("web.title"));
+            html = html.Replace("{{directory_for}}", i18n.T("web.directory_for"));
+            html = html.Replace("{{server}}", i18n.T("web.server"));
+            html = html.Replace("{{current_time}}", i18n.T("web.current_time"));
+            html = html.Replace("{{name}}", i18n.T("web.name"));
+            html = html.Replace("{{last_modified}}", i18n.T("web.last_modified"));
+            html = html.Replace("{{size}}", i18n.T("web.size"));
+            html = html.Replace("{{loading}}", i18n.T("web.loading"));
+            html = html.Replace("{{preview_file}}", i18n.T("web.preview_file"));
+            html = html.Replace("{{loading_content}}", i18n.T("web.loading_content"));
+            html = html.Replace("{{close}}", i18n.T("web.close"));
+            html = html.Replace("{{i18n}}", webTranslations);
+            
             html = html.Replace("/* CSS will be injected here */", css);
             html = html.Replace("/* JavaScript will be injected here */", js);
               
