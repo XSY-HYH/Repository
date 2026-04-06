@@ -12,6 +12,7 @@ x86/
 *.user
 *.userosscache
 *.sln.docstates
+publish/
 
 # User-specific files
 *.rsuser

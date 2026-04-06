@@ -122,8 +122,6 @@ Repository/
 |----------|--------|-------------|
 | `/admin` | GET | Admin panel page |
 | `/admin/ws` | WebSocket | WebSocket communication |
-| `/admin/api/logs` | GET | Get log file list |
-| `/admin/api/logs/{file}` | GET | Get log file content |
 | `/admin/api/upload` | POST | Upload file |
 
 ## Configuration

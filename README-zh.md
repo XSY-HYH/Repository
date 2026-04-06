@@ -120,8 +120,6 @@ Repository/
 |------|------|------|
 | `/admin` | GET | 管理页面 |
 | `/admin/ws` | WebSocket | WebSocket 通信 |
-| `/admin/api/logs` | GET | 获取日志文件列表 |
-| `/admin/api/logs/{file}` | GET | 获取日志文件内容 |
 | `/admin/api/upload` | POST | 上传文件 |
 
 ## 配置说明

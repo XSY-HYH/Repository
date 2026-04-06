@@ -236,6 +236,12 @@ namespace Repository.Controllers
                     case "list_directory":
                         return await ListDirectory(operation.Path, repoPath, clientIP);
 
+                    case "get_logs":
+                        return await GetLogFiles(clientIP);
+
+                    case "get_log":
+                        return await GetLogFile(operation.Path, clientIP);
+
                     default:
                         return ($"未知操作: {operation.Action}", null);
                 }
@@ -492,17 +498,8 @@ namespace Repository.Controllers
             return fullPath;
         }
 
-        [HttpGet("/admin/api/logs")]
-        public IActionResult GetLogFiles()
+        private async Task<(string Message, object? Data)> GetLogFiles(string clientIP)
         {
-            var config = _configManager.GetConfig();
-
-            if (!config.AdminEnabled)
-            {
-                return NotFound("管理功能未启用");
-            }
-
-            var clientIP = GetClientIP();
             _logger.LogInfo($"管理员请求日志文件列表，客户端IP: {clientIP}");
 
             try
@@ -511,7 +508,7 @@ namespace Repository.Controllers
 
                 if (!Directory.Exists(logDirectory))
                 {
-                    return Ok(new { files = new List<object>() });
+                    return ("获取日志文件列表成功", new { files = new List<object>() });
                 }
 
                 var logFiles = Directory.GetFiles(logDirectory, "*.log")
@@ -525,38 +522,34 @@ namespace Repository.Controllers
                     })
                     .ToList();
 
-                return Ok(new { files = logFiles });
+                return ("获取日志文件列表成功", new { files = logFiles });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "获取日志文件列表失败");
-                return StatusCode(500, "服务器内部错误");
+                return ("获取日志文件列表失败", null);
             }
         }
 
-        [HttpGet("/admin/api/logs/{logFile}")]
-        public IActionResult GetLogFile(string logFile)
+        private async Task<(string Message, object? Data)> GetLogFile(string? logFile, string clientIP)
         {
-            var config = _configManager.GetConfig();
-
-            if (!config.AdminEnabled)
+            if (string.IsNullOrEmpty(logFile))
             {
-                return NotFound("管理功能未启用");
+                return ("日志文件名不能为空", null);
             }
 
-            var clientIP = GetClientIP();
             _logger.LogInfo($"管理员请求日志文件，客户端IP: {clientIP}，文件: {logFile}");
 
             try
             {
                 if (ContainsIllegalCharacters(logFile))
                 {
-                    return BadRequest("日志文件名不合法");
+                    return ("日志文件名不合法", null);
                 }
 
                 if (!logFile.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
                 {
-                    return BadRequest("只能访问日志文件");
+                    return ("只能访问日志文件", null);
                 }
 
                 var logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "logs");
@@ -564,27 +557,27 @@ namespace Repository.Controllers
 
                 if (!IsPathValid(logDirectory, logFilePath))
                 {
-                    return BadRequest("日志文件路径不合法");
+                    return ("日志文件路径不合法", null);
                 }
 
                 if (!System.IO.File.Exists(logFilePath))
                 {
-                    return NotFound("日志文件不存在");
+                    return ("日志文件不存在", null);
                 }
 
                 var fileInfo = new System.IO.FileInfo(logFilePath);
                 if (fileInfo.Length > 10 * 1024 * 1024)
                 {
-                    return StatusCode(413, "日志文件过大");
+                    return ("日志文件过大", null);
                 }
 
                 var logContent = System.IO.File.ReadAllText(logFilePath);
-                return Content(logContent, "text/plain");
+                return ("获取日志文件成功", new { content = logContent });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"获取日志文件失败: {logFile}");
-                return StatusCode(500, "服务器内部错误");
+                return ("获取日志文件失败", null);
             }
         }
 
@@ -849,6 +842,7 @@ namespace Repository.Controllers
         <div class=""header"">
             <h1>Repository 管理</h1>
             <div class=""header-actions"">
+                <button onclick=""showLogsModal()"" style=""background: #17a2b8; margin-right: 10px;"">查看日志</button>
                 <button onclick=""logout()"">退出登录</button>
             </div>
         </div>
@@ -902,6 +896,25 @@ namespace Repository.Controllers
             <div class=""modal-footer"">
                 <button class=""btn-cancel"" onclick=""closeCreateDirModal()"">取消</button>
                 <button class=""btn-confirm"" onclick=""confirmCreateDir()"">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class=""modal"" id=""logsModal"">
+        <div class=""modal-content"" style=""width: 800px; max-height: 70vh; margin: 5vh auto; overflow: hidden; display: flex; flex-direction: column;"">
+            <div class=""modal-header""><h3>日志文件</h3></div>
+            <div class=""modal-body"" style=""flex: 1; overflow: auto;"">
+                <div id=""logsList"">加载中...</div>
+                <div id=""logContent"" style=""display: none; margin-top: 15px;"">
+                    <div style=""margin-bottom: 10px;"">
+                        <button class=""btn-cancel"" onclick=""backToLogsList()"">返回列表</button>
+                        <span id=""currentLogFile"" style=""margin-left: 10px; font-weight: bold;""></span>
+                    </div>
+                    <pre id=""logText"" style=""background: #f8f9fa; padding: 15px; border-radius: 4px; overflow: auto; max-height: 50vh; white-space: pre-wrap; word-break: break-all; font-size: 12px;""></pre>
+                </div>
+            </div>
+            <div class=""modal-footer"">
+                <button class=""btn-cancel"" onclick=""closeLogsModal()"">关闭</button>
             </div>
         </div>
     </div>
@@ -1352,6 +1365,72 @@ window.onclick = function(event) {
         event.target.style.display = 'none';
     }
 };
+
+function showLogsModal() {
+    document.getElementById('logsModal').style.display = 'block';
+    document.getElementById('logsList').style.display = 'block';
+    document.getElementById('logContent').style.display = 'none';
+    loadLogFiles();
+}
+
+function closeLogsModal() {
+    document.getElementById('logsModal').style.display = 'none';
+}
+
+async function loadLogFiles() {
+    const logsList = document.getElementById('logsList');
+    logsList.innerHTML = '加载中...';
+
+    try {
+        const response = await sendOperation('get_logs', null, null);
+
+        if (response.Success && response.Data && response.Data.files) {
+            if (response.Data.files.length === 0) {
+                logsList.innerHTML = '<p style=""color: #6c757d; text-align: center;"">暂无日志文件</p>';
+            } else {
+                let html = '<table style=""width: 100%;""><thead><tr><th>文件名</th><th>大小</th><th>最后修改</th><th>操作</th></tr></thead><tbody>';
+                response.Data.files.forEach(file => {
+                    html += '<tr><td>' + escapeHtml(file.name) + '</td><td>' + escapeHtml(file.size) + '</td><td>' + escapeHtml(file.lastModified) + '</td><td><button class=""action-btn"" style=""background: #007bff; color: white;"" onclick=""viewLogFile(\'' + escapeHtml(file.name) + '\')"">查看</button></td></tr>';
+                });
+                html += '</tbody></table>';
+                logsList.innerHTML = html;
+            }
+        } else {
+            logsList.innerHTML = '<p style=""color: #dc3545; text-align: center;"">加载失败: ' + escapeHtml(response.Message) + '</p>';
+        }
+    } catch (e) {
+        logsList.innerHTML = '<p style=""color: #dc3545; text-align: center;"">加载失败: ' + escapeHtml(e.message) + '</p>';
+    }
+}
+
+async function viewLogFile(fileName) {
+    const logsList = document.getElementById('logsList');
+    const logContent = document.getElementById('logContent');
+    const logText = document.getElementById('logText');
+    const currentLogFile = document.getElementById('currentLogFile');
+
+    logText.innerHTML = '加载中...';
+    currentLogFile.textContent = fileName;
+    logsList.style.display = 'none';
+    logContent.style.display = 'block';
+
+    try {
+        const response = await sendOperation('get_log', fileName, null);
+
+        if (response.Success && response.Data && response.Data.content) {
+            logText.textContent = response.Data.content;
+        } else {
+            logText.innerHTML = '<span style=""color: #dc3545;"">加载失败: ' + escapeHtml(response.Message) + '</span>';
+        }
+    } catch (e) {
+        logText.innerHTML = '<span style=""color: #dc3545;"">加载失败: ' + escapeHtml(e.message) + '</span>';
+    }
+}
+
+function backToLogsList() {
+    document.getElementById('logsList').style.display = 'block';
+    document.getElementById('logContent').style.display = 'none';
+}
 ";
         }
     }
