@@ -1,0 +1,585 @@
+en:
+  server:
+    starting: "Starting repository server..."
+    stopped: "Server stopped gracefully"
+    shutdown: "Shutting down server..."
+    port_in_use: "Port {0} is already in use"
+    port_check_failed: "Port check failed"
+    exit_in_seconds: "Program will exit in {0} seconds..."
+    auto_restart_enabled: "Auto-restart enabled, preparing to restart server..."
+    auto_restart_disabled: "Auto-restart disabled, program will exit"
+    
+  config:
+    loaded: "Configuration loaded - IP: {0}, Port: {1}, Repository: {2}"
+    changed: "Configuration changed detected, updating services..."
+    services_updated: "Services updated with new configuration: IP={0} (listening on {1}), Port={2}, RepositoryPath={3}"
+    update_failed: "Failed to update services with new configuration"
+    saved: "Configuration saved successfully"
+    load_failed: "Failed to load configuration from file: {0} - {1}"
+    backup_created: "Backup of corrupted config file created: {0}"
+    corrupted_deleted: "Corrupted configuration file deleted"
+    delete_failed: "Failed to delete corrupted config file: {0}"
+    not_found: "Configuration file not found, creating default config"
+    help_null: "Cannot generate help file: configuration is null"
+    help_deleted: "Help file deleted as GenerateHelp is set to false"
+    help_delete_failed: "Failed to delete help file: {0}"
+    help_extracted: "Help file extracted from embedded resource: help.txt"
+    help_stream_null: "Failed to extract help file: stream is null"
+    help_not_found: "Help resource not found: {0}"
+    help_extract_failed: "Failed to extract help file from embedded resource: {0}"
+    repo_ensured: "Repository directory ensured: {0}"
+    repo_created: "Created repository directory: {0}"
+    file_locked: "Configuration file locked: {0}"
+    lock_failed: "Failed to lock configuration file: {0}"
+    file_unlocked: "Configuration file unlocked"
+    unlock_failed: "Failed to unlock configuration file: {0}"
+    watcher_started: "Configuration file watcher started successfully"
+    watcher_failed: "Failed to start configuration file watcher: {0}"
+    throttled: "Configuration change ignored due to throttling"
+    already_processing: "Configuration change already being processed, skipping..."
+    reloaded: "Configuration reloaded due to file change"
+    change_event: "Configuration change event triggered: IP={0}, Port={1}, RepositoryPath={2}"
+    unchanged: "Configuration file changed but content is identical, no event triggered"
+    reload_failed: "Failed to reload configuration from file change"
+    
+  console:
+    topmost_set: "Console window set to topmost"
+    hidden: "Console window hidden, running in background"
+    topmost_not_supported: "PintoTop option is not supported on non-Windows platforms"
+    background_not_supported: "Background option is not supported on non-Windows platforms"
+    
+  repository:
+    dir_confirmed: "Repository directory confirmed: {0}"
+    dir_created: "Created repository directory: {0}"
+    dir_ensured: "Repository directory ensured: {0}"
+    
+  watcher:
+    started: "File watcher started"
+    protection_started: "Protection service started"
+    
+  http:
+    enabled: "HTTP enabled, listening on {0}"
+    disabled: "HTTP disabled"
+    
+  https:
+    enabled: "HTTPS enabled, listening on {0}"
+    disabled: "HTTPS disabled"
+    redirect_enabled: "HTTPS redirect enabled, HTTP requests will redirect to HTTPS port {0}"
+    redirect_disabled: "HTTPS redirect not enabled"
+    redirect_not_active: "HTTPS redirect not active (HTTP not enabled)"
+    redirect_active: "HTTPS redirect enabled, HTTP requests will redirect to HTTPS"
+    using_cert: "Using configured certificate: {0}"
+    generating_cert: "No certificate configured or file not found, attempting to generate self-signed certificate..."
+    cert_generated: "Self-signed certificate generated"
+    cert_invalid: "Unable to obtain valid HTTPS certificate, HTTPS may not work properly"
+    
+  listen:
+    info: "Server will start on: {0}"
+    full_info: "Server will start on: (listening on {0}), HTTP port {1}, HTTPS port {2}"
+    ipv4_all: "all IPv4 addresses (0.0.0.0)"
+    ipv4_ipv6: "IPv4 and IPv6 (::)"
+    
+  admin:
+    notifying: "Notifying {0} admin connections..."
+    closing: "Closing admin connections..."
+    connection_registered: "Admin connection registered: {0}"
+    connection_removed: "Admin connection removed: {0}"
+    notification_sent: "Notification sent to admin connection: {0}"
+    notification_failed: "Failed to send notification to admin connection: {0}"
+    server_shutdown: "Server shutdown"
+    closing_all: "Closing all admin connections, reason: {0}"
+    websocket_close_error: "Error closing WebSocket connection"
+    
+  chap:
+    admin_disabled: "Admin feature is disabled"
+    password_not_configured: "Admin password not configured"
+    decrypt_failed: "Decryption failed"
+    decrypt_failed_log: "CHAP login failed: decryption failed, client IP: {0}"
+    username_wrong_log: "CHAP login failed: wrong username, client IP: {0}, username: {1}"
+    auth_failed: "Username or password incorrect"
+    login_success: "Login successful"
+    login_success_log: "CHAP login successful, client IP: {0}, session ID: {1}"
+    operation_decrypt_failed_log: "CHAP operation failed: decryption failed, client IP: {0}"
+    invalid_request: "Invalid operation request"
+    session_sync_required: "Session ID expired, please re-sync"
+    session_expired: "Session expired, please login again"
+    ip_mismatch: "IP mismatch"
+    ip_mismatch_log: "CHAP operation failed: IP mismatch, client IP: {0}, session IP: {1}"
+    operation_success: "Operation successful"
+    json_parse_error: "Data format error"
+    json_parse_error_log: "CHAP operation failed: JSON parse error"
+    
+  protection:
+    disabled: "Protection feature is disabled, skipping protection service startup"
+    started: "Protection service started watching for Protectionlock.json files"
+    stopped: "Protection service stopped"
+    scanned: "Scanned {0} Protectionlock.json files"
+    scan_error: "Error scanning Protectionlock.json files: {0}"
+    hash_updated: "Updated Protectionlock.json with hash for: {0}"
+    lock_loaded: "Loaded protection lock for path: {0} (method: {1})"
+    lock_load_error: "Error loading Protectionlock.json from {0}: {1}"
+    invalid_secure_config: "Invalid secure auth configuration for: {0}"
+    client_not_registered: "Client not registered: {0}, secure auth will not work until client registers"
+    handler_created: "Secure handler created for: {0}"
+    lock_changed: "Protectionlock.json changed: {0}"
+    lock_removed: "Removed protection lock for path: {0}"
+    
+  cert:
+    found: "Found existing self-signed certificate: {0}, {1}"
+    generating: "Generating self-signed certificate, domain: {0}"
+    generated: "Self-signed certificate generated"
+    cert_path: "  Certificate: {0}"
+    key_path: "  Private key: {0}"
+    validity: "Certificate validity: 5 years"
+    warning: "Warning: Self-signed certificate is not trusted by browsers, for development only"
+    generate_failed: "Failed to generate self-signed certificate"
+    
+  notification:
+    enabled: "[+] Windows notification enabled"
+    not_windows: "[!] Non-Windows system, notification feature disabled"
+    send_failed: "[!] Failed to send notification: {0}"
+    
+  secure_session:
+    created: "Created secure session: {0} for client: {1}, path: {2}"
+    removed: "Removed secure session: {0}"
+    cleaned: "Cleaned up {0} expired secure sessions"
+    
+  key:
+    loaded: "Loaded existing server key pair"
+    generated: "Generated new server key pair"
+    init_failed: "Failed to initialize keys, generating new key pair"
+    client_registered: "Registered client public key: {0}"
+    client_register_failed: "Failed to register client public key: {0}"
+    client_not_found: "Client public key not found: {0}"
+    token_not_found: "Shared token not found: {0}"
+    client_removed: "Removed client: {0}"
+    
+  ddos:
+    permanent_block: "IP {0} is in permanent block list"
+    temp_block: "IP {0} is temporarily blocked (until {1})"
+    unblocked: "IP {0} has been unblocked after timeout"
+    blocked_excessive: "IP {0} blocked due to excessive requests ({1} requests in last minute, limit is {2})"
+    added_permanent: "IP {0} added to permanent block list"
+    manually_unblocked: "IP {0} has been manually unblocked"
+    
+  video:
+    initialized: "VideoStreamingService initialized, temp directory: {0}"
+    info_failed: "Failed to get video info: {0}"
+    playlist_created: "Created HLS playlist: {0}, containing {1} segments"
+    playlist_failed: "Failed to create HLS playlist: {0}"
+    segment_created: "Created simulated segment: {0}"
+    segment_failed: "Failed to create simulated segment: {0}"
+    segment_not_found: "Segment not found: {0}"
+    playlist_not_found: "Playlist not found for video ID: {0}"
+    info_by_id_failed: "Failed to get video info, video ID: {0}"
+    hls_segment_not_found: "HLS segment not found: {0}_seg{1}.ts"
+    hls_segment_failed: "Failed to get HLS segment, video ID: {0}, segment index: {1}"
+    expired_segment_deleted: "Deleted expired segment: {0}"
+    expired_playlist_deleted: "Deleted expired playlist: {0}"
+    cleanup_failed: "Failed to cleanup expired segments"
+    
+  network:
+    network_initialized: "Network file service initialized for network path: {0} (mapped to: {1})"
+    directory_created: "Created directory: {0}"
+    local_initialized: "Network file service initialized for local path: {0}"
+    init_failed: "Failed to initialize network file service for path: {0}"
+    file_exists_error: "Error checking file existence: {0}"
+    provider_fallback: "File exists but PhysicalFileProvider failed: {0}"
+    file_info_error: "Error getting file info: {0}"
+    directory_exists_error: "Error checking directory existence: {0}"
+    directory_contents_error: "Error getting directory contents: {0}"
+    updating_path: "Updating network file service from {0} to {1}"
+    path_updated: "Network file service updated successfully"
+    update_failed: "Failed to update network file service to path: {0}"
+    file_not_found: "File not found: {0}"
+    
+  blacklist:
+    path_blocked: "Path '{0}' is blacklisted (matched: {1})"
+    file_read_error: "Failed to read blacklist file '{0}': {1}"
+    wildcard_error: "Wildcard match failed: {0} -> {1}, error: {2}"
+    updated: "Blacklist updated: {0}"
+    
+  filewatcher:
+    started: "File watcher started for repository path: {0}"
+    start_failed: "Failed to start file watcher"
+    file_created: "File created: {0}"
+    file_changed: "File changed: {0}"
+    file_deleted: "File deleted: {0}"
+    file_renamed: "File renamed: {0} -> {1}"
+    error: "File watcher error occurred"
+    stopped: "File watcher stopped"
+    path_updated: "File watcher path updated: {0} -> {1}"
+    
+  ipblocking:
+    ip_allowed: "IP {0} allowed by IP Blocking (matched: {1})"
+    ip_blocked: "IP {0} blocked by IP Blocking"
+    updated: "IP Blocking updated: Enabled={0}, IP List={1}"
+    
+  access:
+    count: "{0}th access (session #{1}) - IP: {2}, Device: {3}, Browser: {4}, Path: {5} {6}"
+    api: "API access - IP: {0}, Device: {1}, Browser: {2}, Path: {3} {4}"
+    new_visit: "New visit!"
+    visit_count: "{0}th access"
+    
+  device:
+    desktop: "Desktop"
+    mobile: "Mobile"
+    tablet: "Tablet"
+    bot: "Bot/Crawler"
+    unknown: "Unknown device"
+    
+  browser:
+    chrome: "Chrome"
+    firefox: "Firefox"
+    safari: "Safari"
+    edge: "Edge"
+    opera: "Opera"
+    ie: "Internet Explorer"
+    unknown: "Unknown browser"
+    
+  log:
+    header: "=== Repository Server Log ==="
+    startup_time: "Startup time: {0}"
+    log_file: "Log file: {0}"
+    flush_failed: "Log flush failed: {0}"
+    write_failed: "Log write failed: {0}"
+    
+  data:
+    read_count: "Read access count: {0}"
+    format_error: "Data file format error, resetting access count to 0"
+    created: "Created new data file, access count initialized to 0"
+    save_failed: "Failed to save access count to data file: {0}"
+    init_failed: "Failed to initialize access count"
+    
+  lang:
+    set: "Language set to: {0}"
+    embedded_loaded: "Loaded embedded translations"
+    embedded_not_found: "Embedded lang.yml not found"
+    external_loaded: "Loaded external translations from: {0}"
+    external_failed: "Failed to load external translations for '{0}'"
+    fallback: "Language file '{0}.yml' not found in lang directory, falling back to English"
+    parse_failed: "Failed to parse YAML content"
+    
+  error:
+    prefix: "Error"
+    exception: "Exception"
+    stack_trace: "Stack trace"
+    port_occupied: "Error: Port {0} is already in use. Please check if another program is using these ports."
+    start_failed: "Failed to start server"
+    
+  web:
+    title: "Directory Listing"
+    directory_for: "Directory listing for"
+    server: "Server"
+    current_time: "Current Time"
+    name: "Name"
+    last_modified: "Last Modified"
+    size: "Size"
+    loading: "Loading..."
+    empty_directory: "Empty directory"
+    preview: "Preview"
+    copy_link: "Copy download link"
+    load_failed: "Loading failed, please try again"
+    get_link_failed: "Failed to get download link, please try again"
+    preview_file: "File Preview"
+    loading_content: "Loading file content..."
+    close: "Close"
+    download_file: "Download file"
+    path_decode_failed: "Path decode failed"
+    file_list_load_failed: "File list loading failed"
+    copy_failed: "Copy failed"
+    preview_failed: "Preview failed"
+    unknown_error: "Unknown error"
+
+zh:
+  server:
+    starting: "开始启动仓库服务器..."
+    stopped: "服务器已正常停止"
+    shutdown: "正在关闭服务器..."
+    port_in_use: "端口 {0} 已被占用"
+    port_check_failed: "端口检查失败"
+    exit_in_seconds: "程序将在 {0} 秒后退出..."
+    auto_restart_enabled: "自动重启功能已启用，准备重启服务器..."
+    auto_restart_disabled: "自动重启功能未启用，程序将退出"
+    
+  config:
+    loaded: "配置信息加载完成 - IP: {0}, 端口: {1}, 仓库路径: {2}"
+    changed: "检测到配置变更，正在更新服务..."
+    services_updated: "服务已更新 - IP={0} (监听{1})，端口={2}，仓库路径={3}"
+    update_failed: "更新服务配置失败"
+    saved: "配置保存成功"
+    load_failed: "从文件加载配置失败: {0} - {1}"
+    backup_created: "已创建损坏配置文件的备份: {0}"
+    corrupted_deleted: "已删除损坏的配置文件"
+    delete_failed: "删除损坏的配置文件失败: {0}"
+    not_found: "配置文件未找到，正在创建默认配置"
+    help_null: "无法生成帮助文件：配置为空"
+    help_deleted: "帮助文件已删除，因为 GenerateHelp 设置为 false"
+    help_delete_failed: "删除帮助文件失败: {0}"
+    help_extracted: "已从嵌入资源提取帮助文件: help.txt"
+    help_stream_null: "提取帮助文件失败：流为空"
+    help_not_found: "帮助资源未找到: {0}"
+    help_extract_failed: "从嵌入资源提取帮助文件失败: {0}"
+    repo_ensured: "仓库目录已确认: {0}"
+    repo_created: "已创建仓库目录: {0}"
+    file_locked: "配置文件已锁定: {0}"
+    lock_failed: "锁定配置文件失败: {0}"
+    file_unlocked: "配置文件已解锁"
+    unlock_failed: "解锁配置文件失败: {0}"
+    watcher_started: "配置文件监视器已成功启动"
+    watcher_failed: "启动配置文件监视器失败: {0}"
+    throttled: "配置变更被忽略（节流）"
+    already_processing: "配置变更正在处理中，跳过..."
+    reloaded: "配置因文件变更已重新加载"
+    change_event: "配置变更事件已触发: IP={0}, 端口={1}, 仓库路径={2}"
+    unchanged: "配置文件已变更但内容相同，未触发事件"
+    reload_failed: "从文件变更重新加载配置失败"
+    
+  console:
+    topmost_set: "控制台窗口已设置为置顶"
+    hidden: "控制台窗口已隐藏，程序在后台运行"
+    topmost_not_supported: "PintoTop 选项在非 Windows 环境下不生效"
+    background_not_supported: "Background 选项在非 Windows 环境下不生效"
+    
+  repository:
+    dir_confirmed: "仓库目录已确认: {0}"
+    dir_created: "已创建仓库目录: {0}"
+    dir_ensured: "仓库目录已确认: {0}"
+    
+  watcher:
+    started: "文件监视器已启动"
+    protection_started: "保护服务已启动"
+    
+  http:
+    enabled: "HTTP已启用，监听{0}"
+    disabled: "HTTP已禁用"
+    
+  https:
+    enabled: "HTTPS已启用，监听{0}"
+    disabled: "HTTPS已禁用"
+    redirect_enabled: "HTTPS重定向已启用，HTTP请求将自动跳转到HTTPS端口{0}"
+    redirect_disabled: "HTTPS重定向未启用"
+    redirect_not_active: "HTTPS重定向未生效（HTTP未启用）"
+    redirect_active: "HTTPS重定向已启用，HTTP请求将自动跳转到HTTPS"
+    using_cert: "使用配置的证书: {0}"
+    generating_cert: "未配置证书路径或证书文件不存在，尝试生成自签名证书..."
+    cert_generated: "已生成自签名证书"
+    cert_invalid: "无法获取有效的HTTPS证书，HTTPS可能无法正常工作"
+    
+  listen:
+    info: "服务器将启动于: {0}"
+    full_info: "服务器将启动于: (监听{0})，HTTP端口{1}，HTTPS端口{2}"
+    ipv4_all: "所有IPv4地址 (0.0.0.0)"
+    ipv4_ipv6: "IPv4和IPv6 (::)"
+    
+  admin:
+    notifying: "正在通知 {0} 个管理员连接..."
+    closing: "正在关闭管理员连接..."
+    connection_registered: "管理员连接已注册: {0}"
+    connection_removed: "管理员连接已移除: {0}"
+    notification_sent: "已发送通知到管理员连接: {0}"
+    notification_failed: "发送通知到管理员连接失败: {0}"
+    server_shutdown: "服务器关闭"
+    closing_all: "正在关闭所有管理员连接，原因: {0}"
+    websocket_close_error: "关闭WebSocket连接时出错"
+    
+  chap:
+    admin_disabled: "管理功能未启用"
+    password_not_configured: "管理员密码未配置"
+    decrypt_failed: "解密失败"
+    decrypt_failed_log: "CHAP登录失败：解密失败，客户端IP: {0}"
+    username_wrong_log: "CHAP登录失败：用户名错误，客户端IP: {0}，用户名: {1}"
+    auth_failed: "用户名或密码错误"
+    login_success: "登录成功"
+    login_success_log: "CHAP登录成功，客户端IP: {0}，会话ID: {1}"
+    operation_decrypt_failed_log: "CHAP操作失败：解密失败，客户端IP: {0}"
+    invalid_request: "无效的操作请求"
+    session_sync_required: "会话ID已失效，请重新同步"
+    session_expired: "会话已过期，请重新登录"
+    ip_mismatch: "IP不匹配"
+    ip_mismatch_log: "CHAP操作失败：IP不匹配，客户端IP: {0}，会话IP: {1}"
+    operation_success: "操作成功"
+    json_parse_error: "数据格式错误"
+    json_parse_error_log: "CHAP操作失败：JSON解析错误"
+    
+  protection:
+    disabled: "保护功能已禁用，跳过保护服务启动"
+    started: "保护服务已开始监视 Protectionlock.json 文件"
+    stopped: "保护服务已停止"
+    scanned: "已扫描 {0} 个 Protectionlock.json 文件"
+    scan_error: "扫描 Protectionlock.json 文件时出错: {0}"
+    hash_updated: "已更新 Protectionlock.json 的哈希值: {0}"
+    lock_loaded: "已加载路径的保护锁: {0} (方法: {1})"
+    lock_load_error: "从 {0} 加载 Protectionlock.json 失败: {1}"
+    invalid_secure_config: "无效的安全认证配置: {0}"
+    client_not_registered: "客户端未注册: {0}，安全认证将在客户端注册后才能工作"
+    handler_created: "已为 {0} 创建安全处理器"
+    lock_changed: "Protectionlock.json 已变更: {0}"
+    lock_removed: "已移除路径的保护锁: {0}"
+    
+  cert:
+    found: "发现已存在的自签名证书: {0}, {1}"
+    generating: "正在生成自签名证书，域名: {0}"
+    generated: "自签名证书已生成"
+    cert_path: "  证书: {0}"
+    key_path: "  私钥: {0}"
+    validity: "证书有效期: 5年"
+    warning: "警告: 自签名证书不被浏览器信任，仅用于开发测试"
+    generate_failed: "生成自签名证书失败"
+    
+  notification:
+    enabled: "[+] Windows通知已启用"
+    not_windows: "[!] 非Windows系统，通知功能已禁用"
+    send_failed: "[!] 发送通知失败: {0}"
+    
+  secure_session:
+    created: "已创建安全会话: {0}，客户端: {1}，路径: {2}"
+    removed: "已移除安全会话: {0}"
+    cleaned: "已清理 {0} 个过期的安全会话"
+    
+  key:
+    loaded: "已加载现有服务器密钥对"
+    generated: "已生成新的服务器密钥对"
+    init_failed: "初始化密钥失败，生成新密钥对"
+    client_registered: "已注册客户端公钥: {0}"
+    client_register_failed: "注册客户端公钥失败: {0}"
+    client_not_found: "未找到客户端公钥: {0}"
+    token_not_found: "未找到共享令牌: {0}"
+    client_removed: "已移除客户端: {0}"
+    
+  ddos:
+    permanent_block: "IP {0} 在永久阻止列表中"
+    temp_block: "IP {0} 被临时阻止（直到 {1}）"
+    unblocked: "IP {0} 已在超时后解除阻止"
+    blocked_excessive: "IP {0} 因请求过多被阻止（最后一分钟 {1} 次请求，限制为 {2}）"
+    added_permanent: "IP {0} 已添加到永久阻止列表"
+    manually_unblocked: "IP {0} 已被手动解除阻止"
+    
+  video:
+    initialized: "VideoStreamingService已初始化，临时目录: {0}"
+    info_failed: "无法获取视频信息: {0}"
+    playlist_created: "已创建HLS播放列表: {0}，包含{1}个切片"
+    playlist_failed: "创建HLS播放列表失败: {0}"
+    segment_created: "已创建模拟切片: {0}"
+    segment_failed: "创建模拟切片失败: {0}"
+    segment_not_found: "切片不存在: {0}"
+    playlist_not_found: "找不到视频ID对应的播放列表: {0}"
+    info_by_id_failed: "获取视频信息失败，视频ID: {0}"
+    hls_segment_not_found: "找不到视频片段: {0}_seg{1}.ts"
+    hls_segment_failed: "获取HLS视频片段失败，视频ID: {0}，片段索引: {1}"
+    expired_segment_deleted: "已删除过期切片: {0}"
+    expired_playlist_deleted: "已删除过期播放列表: {0}"
+    cleanup_failed: "清理过期切片失败"
+    
+  network:
+    network_initialized: "网络文件服务已初始化，网络路径: {0} (映射到: {1})"
+    directory_created: "已创建目录: {0}"
+    local_initialized: "网络文件服务已初始化，本地路径: {0}"
+    init_failed: "初始化网络文件服务失败，路径: {0}"
+    file_exists_error: "检查文件存在时出错: {0}"
+    provider_fallback: "文件存在但 PhysicalFileProvider 失败: {0}"
+    file_info_error: "获取文件信息时出错: {0}"
+    directory_exists_error: "检查目录存在时出错: {0}"
+    directory_contents_error: "获取目录内容时出错: {0}"
+    updating_path: "正在更新网络文件服务，从 {0} 到 {1}"
+    path_updated: "网络文件服务更新成功"
+    update_failed: "更新网络文件服务到路径失败: {0}"
+    file_not_found: "文件未找到: {0}"
+    
+  blacklist:
+    path_blocked: "路径 '{0}' 在黑名单中（匹配: {1}）"
+    file_read_error: "无法读取黑名单文件 '{0}': {1}"
+    wildcard_error: "通配符匹配失败: {0} -> {1}, 错误: {2}"
+    updated: "黑名单已更新: {0}"
+    
+  filewatcher:
+    started: "文件监视器已启动，仓库路径: {0}"
+    start_failed: "启动文件监视器失败"
+    file_created: "文件已创建: {0}"
+    file_changed: "文件已更改: {0}"
+    file_deleted: "文件已删除: {0}"
+    file_renamed: "文件已重命名: {0} -> {1}"
+    error: "文件监视器发生错误"
+    stopped: "文件监视器已停止"
+    path_updated: "文件监视器路径已更新: {0} -> {1}"
+    
+  ipblocking:
+    ip_allowed: "IP {0} 被IP阻止允许（匹配: {1}）"
+    ip_blocked: "IP {0} 被IP阻止阻止"
+    updated: "IP阻止已更新: 启用={0}, IP列表={1}"
+    
+  access:
+    count: "第{0}次访问（本次会话第{1}次） - IP: {2}, 设备: {3}, 浏览器: {4}, 路径: {5} {6}"
+    api: "API访问 - IP: {0}, 设备: {1}, 浏览器: {2}, 路径: {3} {4}"
+    new_visit: "有新的访问！"
+    visit_count: "第{0}次访问"
+    
+  device:
+    desktop: "桌面设备"
+    mobile: "移动设备"
+    tablet: "平板设备"
+    bot: "爬虫/机器人"
+    unknown: "未知设备"
+    
+  browser:
+    chrome: "Chrome"
+    firefox: "Firefox"
+    safari: "Safari"
+    edge: "Edge"
+    opera: "Opera"
+    ie: "Internet Explorer"
+    unknown: "未知浏览器"
+    
+  log:
+    header: "=== 仓库服务器日志 ==="
+    startup_time: "启动时间: {0}"
+    log_file: "日志文件: {0}"
+    flush_failed: "日志刷新失败: {0}"
+    write_failed: "日志写入失败: {0}"
+    
+  data:
+    read_count: "读取到访问计数: {0}"
+    format_error: "data文件格式错误，重置访问计数为0"
+    created: "创建新的data文件，访问计数初始化为0"
+    save_failed: "保存访问计数到data文件失败: {0}"
+    init_failed: "初始化访问计数失败"
+    
+  lang:
+    set: "语言设置为: {0}"
+    embedded_loaded: "已加载内嵌翻译"
+    embedded_not_found: "未找到内嵌 lang.yml"
+    external_loaded: "已加载外部翻译文件: {0}"
+    external_failed: "加载外部翻译文件失败: {0}"
+    fallback: "在 lang 目录中未找到语言文件 '{0}.yml'，回退到英文"
+    parse_failed: "解析 YAML 内容失败"
+    
+  error:
+    prefix: "错误"
+    exception: "异常信息"
+    stack_trace: "堆栈跟踪"
+    port_occupied: "错误: 端口 {0} 已被占用，请检查是否有其他程序正在使用这些端口。"
+    start_failed: "服务器启动失败"
+    
+  web:
+    title: "目录列表"
+    directory_for: "目录列表"
+    server: "服务器"
+    current_time: "当前时间"
+    name: "名称"
+    last_modified: "最后修改"
+    size: "大小"
+    loading: "加载中..."
+    empty_directory: "空目录"
+    preview: "预览"
+    copy_link: "复制下载链接"
+    load_failed: "加载失败，请稍后重试"
+    get_link_failed: "获取下载链接失败，请稍后重试"
+    preview_file: "文件预览"
+    loading_content: "正在加载文件内容..."
+    close: "关闭"
+    download_file: "下载文件"
+    path_decode_failed: "路径解码失败"
+    file_list_load_failed: "文件列表加载失败"
+    copy_failed: "复制失败"
+    preview_failed: "预览失败"
+    unknown_error: "未知错误"

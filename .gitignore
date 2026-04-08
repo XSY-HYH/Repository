@@ -1,0 +1,60 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+publish/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userprefs
+
+# Build logs
+[Ll]ogs/
+
+# Configuration files with sensitive data
+Config.json
+
+# Data files
+data
+ip_blacklist.txt
+
+# SSL certificates
+*.pfx
+*.crt
+*.key
+
+# Keys
+.keys/
+
+# Repository directory
+Repository/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!-- 泥为什么要看代码！！！（恼） -->
+<html lang="{{lang}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="icon" type="image/x-icon" href="/api/log">
+    <style>
+        /* CSS will be injected here */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="directoryTitle">{{directory_for}} {{currentPath}}</h1>
+            <div class="header-actions">
+                <div class="server-info">
+                    <span id="serverName">{{server}}</span> | <span id="currentTime">{{current_time}}</span>
+                </div>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th id="thName">{{name}}</th>
+                    <th id="thLastModified">{{last_modified}}</th>
+                    <th id="thSize">{{size}}</th>
+                </tr>
+            </thead>
+            <tbody id="fileList">
+                <tr><td colspan="3" class="empty" id="loadingText">{{loading}}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="previewFileName">{{preview_file}}</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="previewLoading">{{loading_content}}</div>
+                <div id="previewError" style="display: none;"></div>
+                <div id="previewContent" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="closePreviewBtn" class="btn btn-secondary">{{close}}</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        /* i18n translations will be injected here */
+        var i18n = {{i18n}};
+        
+        function t(key) {
+            return i18n[key] || key;
+        }
+        
+        /* JavaScript will be injected here */
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFileList();
+        });
+    </script>
+</body>
+</html>

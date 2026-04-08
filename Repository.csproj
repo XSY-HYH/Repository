@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Repository</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0-preview.3.25172.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.2" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Config.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="help.txt" />
+    <EmbeddedResource Include="lang.yml" />
+    <EmbeddedResource Include="DirectoryListing.Html" />
+    <EmbeddedResource Include="DirectoryListing.Css" />
+    <EmbeddedResource Include="DirectoryListing.JS" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="WindowsNotifier.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="WindowsNotifier">
+      <HintPath>WindowsNotifier.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

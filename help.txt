@@ -1,0 +1,243 @@
+================================================================================
+                        Repository - Configuration Help
+                        Repository - 配置帮助文档
+================================================================================
+
+This document describes all available configuration options in Config.json.
+本文档描述 Config.json 中所有可用的配置选项。
+
+================================================================================
+                            BASIC CONFIGURATION / 基础配置
+================================================================================
+
+IP (string, default: "::")
+    Listen address. Use "::" for all interfaces, "127.0.0.1" for localhost only.
+    监听地址。使用 "::" 监听所有接口，"127.0.0.1" 仅监听本地。
+
+Port (int, default: 8000)
+    HTTP port number.
+    HTTP 端口号。
+
+RepositoryPath (string, default: "./Repository")
+    Root directory for file storage. Can be local path or network path (UNC).
+    文件存储根目录。可以是本地路径或网络路径（UNC）。
+
+Notification (bool, default: false)
+    Enable Windows Toast notifications for access events, warnings, errors.
+    启用 Windows Toast 通知，用于访问事件、警告、错误提醒。
+
+================================================================================
+                        ADMIN CONFIGURATION / 管理员配置
+================================================================================
+
+AdminEnabled (bool, default: false)
+    Enable admin panel at /admin.
+    启用管理面板 /admin。
+
+AdminUsername (string, default: "")
+    Admin username for CHAP authentication.
+    CHAP 认证的管理员用户名。
+
+AdminPassword (string, default: "")
+    Admin password for CHAP authentication.
+    CHAP 认证的管理员密码。
+
+================================================================================
+                        SECURITY CONFIGURATION / 安全配置
+================================================================================
+
+IPBlocking (bool, default: false)
+    Enable IP whitelist mode. Only IPs in IPBlockingList can access.
+    启用 IP 白名单模式。只有 IPBlockingList 中的 IP 可以访问。
+
+IPBlockingList (string, default: "")
+    IP whitelist, separated by comma. Example: "127.0.0.1,192.168.1.0/24"
+    IP 白名单，逗号分隔。示例："127.0.0.1,192.168.1.0/24"
+
+Blacklist (string, default: "")
+    Path blacklist patterns, separated by |. Supports:
+    路径黑名单模式，用 | 分隔。支持：
+    - Exact path: secret/data.txt
+    - Wildcard: *.log
+    - Directory wildcard: temp/*
+    - Subdirectory match: %/node_modules
+    - File reference: /path/to/blacklist.txt
+
+DDoSProtection (bool, default: true)
+    Enable DDoS protection with rate limiting.
+    启用 DDoS 防护和速率限制。
+
+MaxRequestsPerMinute (int, default: 100)
+    Maximum requests per minute per IP before blocking.
+    每个 IP 每分钟最大请求数，超过则封禁。
+
+BlockDurationMinutes (int, default: 30)
+    Block duration in minutes for rate-limited IPs.
+    速率限制 IP 的封禁时长（分钟）。
+
+================================================================================
+                        UPLOAD CONFIGURATION / 上传配置
+================================================================================
+
+UploadEnabled (bool, default: false)
+    Enable file upload functionality.
+    启用文件上传功能。
+
+MaxUploadSizeMB (int, default: 50)
+    Maximum upload file size in MB.
+    最大上传文件大小（MB）。
+
+AllowedUploadExtensions (string, default: "*")
+    Allowed file extensions, separated by comma. Use "*" for all.
+    允许的文件扩展名，逗号分隔。使用 "*" 允许所有。
+
+AllowOverwrite (bool, default: false)
+    Allow overwriting existing files.
+    允许覆盖已存在的文件。
+
+AllowRootUpload (bool, default: false)
+    Allow uploading to repository root directory.
+    允许上传到仓库根目录。
+
+MaxDiskUsagePercent (int, default: 0)
+    Maximum disk usage percentage. 0 = no limit. Upload rejected if exceeded.
+    最大磁盘占用百分比。0 = 不限制。超过则拒绝上传。
+
+================================================================================
+                        PREVIEW CONFIGURATION / 预览配置
+================================================================================
+
+PreviewEnabled (bool, default: true)
+    Enable file preview functionality.
+    启用文件预览功能。
+
+PreviewExtensions (string, default: ".txt,.md,.json,.xml,.yaml,.yml,.csv,.log,.ini,.conf,.cfg,.sh,.bat,.cmd,.ps1,.py,.js,.ts,.html,.css,.sql,.c,.cpp,.h,.hpp,.cs,.java,.go,.rs,.rb,.php,.pl,.lua,.swift,.kt,.scala,.r,.m,.vue,.svelte,.jsx,.tsx")
+    Text file extensions for preview.
+    可预览的文本文件扩展名。
+
+ImagePreviewExtensions (string, default: ".jpg,.jpeg,.png,.gif,.bmp,.ico,.svg,.webp")
+    Image file extensions for preview.
+    可预览的图片文件扩展名。
+
+AudioPreviewExtensions (string, default: ".mp3,.wav,.ogg,.flac,.aac,.m4a,.wma")
+    Audio file extensions for preview.
+    可预览的音频文件扩展名。
+
+VideoPreviewExtensions (string, default: ".mp4,.webm,.mkv,.avi,.mov,.wmv,.flv,.m4v")
+    Video file extensions for preview.
+    可预览的视频文件扩展名。
+
+================================================================================
+                        ACCESS CONTROL / 访问控制
+================================================================================
+
+ForbiddenDownloadPaths (string, default: "")
+    Paths where download is forbidden, separated by |.
+    禁止下载的路径，用 | 分隔。
+
+ForbiddenPreviewPaths (string, default: "")
+    Paths where preview is forbidden, separated by |.
+    禁止预览的路径，用 | 分隔。
+
+HiddenPaths (string, default: "")
+    Hidden paths (not shown in listings), separated by |.
+    隐藏路径（不在列表中显示），用 | 分隔。
+
+ProtectEnabled (bool, default: true)
+    Enable directory protection feature. Disable for faster startup.
+    启用目录保护功能。禁用可加快启动速度。
+
+ProtectPaths (string, default: "")
+    Protected directory paths, separated by |.
+    受保护的目录路径，用 | 分隔。
+
+================================================================================
+                        HTTPS CONFIGURATION / HTTPS 配置
+================================================================================
+
+HttpsEnabled (bool, default: false)
+    Enable HTTPS server.
+    启用 HTTPS 服务器。
+
+HttpsPort (int, default: 443)
+    HTTPS port number.
+    HTTPS 端口号。
+
+HttpsCertificatePath (string, default: "")
+    SSL certificate path (CRT/KEY format). Auto-generated if empty.
+    SSL 证书路径（CRT/KEY 格式）。为空则自动生成。
+
+HttpsCertificatePassword (string, default: "")
+    Certificate password (not needed for PEM format).
+    证书密码（PEM 格式不需要）。
+
+HttpsRedirectEnabled (bool, default: false)
+    Redirect HTTP to HTTPS.
+    将 HTTP 重定向到 HTTPS。
+
+HttpEnabled (bool, default: true)
+    Enable HTTP server.
+    启用 HTTP 服务器。
+
+Domain (string, default: "")
+    Server domain for auto-generated certificate.
+    自动生成证书的服务器域名。
+
+================================================================================
+                        OTHER OPTIONS / 其他选项
+================================================================================
+
+GenerateHelp (bool, default: true)
+    Generate help.txt file on startup.
+    启动时生成 help.txt 文件。
+
+AutoRestart (bool, default: false)
+    Auto-restart server on configuration changes.
+    配置更改时自动重启服务器。
+
+================================================================================
+                        DIRECTORY PROTECTION / 目录保护
+================================================================================
+
+Create Protectionlock.json in a directory to protect it:
+在目录中创建 Protectionlock.json 来保护该目录：
+
+Token Mode (Simple) / Token 模式（简单）:
+{
+    "auth_method": "token",
+    "token": "your_password"
+}
+
+Access: /api/files?path=protected_dir&token=sha256_hash
+访问方式：/api/files?path=protected_dir&token=sha256_hash
+
+Secure Mode (Advanced) / Secure 模式（高级）:
+{
+    "auth_method": "secure",
+    "client_id": "unique_client_id",
+    "shared_token": "shared_secret"
+}
+
+Requires RSA/AES/HMAC client. See docs/api/CHAT.MD for protocol details.
+需要支持 RSA/AES/HMAC 的客户端。协议详情见 docs/api/CHAT.MD。
+
+================================================================================
+                        NOTES / 注意事项
+================================================================================
+
+1. Some configurations require server restart to take effect.
+   部分配置需要重启服务器才能生效。
+
+2. Ensure read/write permissions for RepositoryPath.
+   确保 RepositoryPath 有读写权限。
+
+3. Protected directories are hidden from listings by default.
+   受保护目录默认在列表中隐藏。
+
+4. .keys directory is always protected and hidden.
+   .keys 目录始终受保护且隐藏。
+
+5. Admin panel uses CHAP protocol - password never transmitted.
+   管理面板使用 CHAP 协议 - 密码不会被传输。
+
+================================================================================
