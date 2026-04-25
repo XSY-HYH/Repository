@@ -150,6 +150,9 @@ Repository/
 | DDoSProtection | bool | true | DDoS 防护 |
 | MaxRequestsPerMinute | int | 100 | 每分钟最大请求数 |
 | BlockDurationMinutes | int | 30 | 封禁时长 |
+| RateLimitProtection | bool | false | 限流保护 |
+| RateLimitRequestsPerSecond | int | 50 | 每秒最大请求数 |
+| RateLimitPauseMinutes | int | 5 | 限流暂停时长 |
 
 #### 路径黑名单格式
 使用 `|` 竖线分隔多个条目，支持以下格式：
@@ -205,6 +208,12 @@ $RECYCLE.BIN|System Volume Information|*.log|%/node_modules|temp/*
 | HttpsRedirectEnabled | bool | false | HTTP 重定向 |
 | HttpEnabled | bool | true | 启用 HTTP |
 | Domain | string | "" | 服务器域名（自动证书签名） |
+
+### 自动重启配置
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| AutoRestart | bool | false | 启用崩溃后自动重启 |
+| MaxRestartAttempts | int | 3 | 最大重启尝试次数 |
 
 ## 目录保护配置
 

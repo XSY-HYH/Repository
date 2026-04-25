@@ -34,7 +34,7 @@ namespace Repository.Controllers
 
             if (!config.AdminEnabled)
             {
-                return NotFound("管理功能未启用");
+                return NotFound(I18nService.Instance.T("admin.not_enabled"));
             }
 
             var html = GetAdminHtml();
@@ -62,16 +62,16 @@ namespace Repository.Controllers
 
             if (!config.AdminEnabled)
             {
-                return BadRequest("管理功能未启用");
+                return BadRequest(I18nService.Instance.T("admin.not_enabled"));
             }
 
             if (!HttpContext.WebSockets.IsWebSocketRequest)
             {
-                return BadRequest("需要WebSocket连接");
+                return BadRequest(I18nService.Instance.T("admin.websocket_required"));
             }
 
             var clientIP = GetClientIP();
-            _logger.LogInfo($"管理员WebSocket连接建立，客户端IP: {clientIP}");
+            _logger.LogInfo(I18nService.Instance.T("admin.ws_connected", clientIP));
 
             WebSocket webSocket;
             try
@@ -80,8 +80,8 @@ namespace Repository.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "AcceptWebSocketAsync失败");
-                return BadRequest("WebSocket握手失败");
+                _logger.LogError(ex, I18nService.Instance.T("admin.ws_accept_failed"));
+                return BadRequest(I18nService.Instance.T("admin.websocket_failed"));
             }
 
             try
@@ -92,12 +92,12 @@ namespace Repository.Controllers
             {
                 if (webSocket.State != WebSocketState.Closed && webSocket.State != WebSocketState.Aborted)
                 {
-                    _logger.LogError(ex, $"WebSocket错误，客户端IP: {clientIP}");
+                    _logger.LogError(ex, I18nService.Instance.T("admin.ws_error", clientIP));
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"WebSocket处理错误，客户端IP: {clientIP}");
+                _logger.LogError(ex, I18nService.Instance.T("admin.ws_handler_error", clientIP));
             }
 
             return new EmptyResult();
@@ -120,12 +120,12 @@ namespace Repository.Controllers
 
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
-                            _logger.LogInfo($"管理员WebSocket连接关闭，客户端IP: {clientIP}");
+                            _logger.LogInfo(I18nService.Instance.T("admin.ws_closed", clientIP));
                             try
                             {
                                 if (webSocket.State == WebSocketState.Open || webSocket.State == WebSocketState.CloseReceived)
                                 {
-                                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "关闭连接", CancellationToken.None);
+                                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close", CancellationToken.None);
                                 }
                             }
                             catch (WebSocketException)
@@ -136,7 +136,7 @@ namespace Repository.Controllers
 
                         if (result.MessageType != WebSocketMessageType.Binary)
                         {
-                            await SendError(webSocket, "只支持二进制消息");
+                            await SendError(webSocket, I18nService.Instance.T("admin.binary_only"));
                             continue;
                         }
 
@@ -180,8 +180,8 @@ namespace Repository.Controllers
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"处理WebSocket消息错误，客户端IP: {clientIP}");
-                        await SendError(webSocket, "服务器内部错误");
+                        _logger.LogError(ex, I18nService.Instance.T("admin.ws_message_error", clientIP));
+                        await SendError(webSocket, I18nService.Instance.T("admin.internal_error"));
                     }
                 }
             }
@@ -242,14 +242,26 @@ namespace Repository.Controllers
                     case "get_log":
                         return await GetLogFile(operation.Path, clientIP);
 
+                    case "get_settings":
+                        return await GetServerSettings(clientIP);
+
+                    case "update_settings":
+                        return await UpdateServerSettings(operation.Settings, clientIP);
+
+                    case "get_rate_limit_status":
+                        return await GetRateLimitStatus(clientIP);
+
+                    case "force_resume_rate_limit":
+                        return await ForceResumeRateLimit(clientIP);
+
                     default:
-                        return ($"未知操作: {operation.Action}", null);
+                        return (I18nService.Instance.T("admin.unknown_action", operation.Action), null);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"执行操作失败，客户端IP: {clientIP}，操作: {operation.Action}");
-                return ($"操作失败: {ex.Message}", null);
+                _logger.LogError(ex, I18nService.Instance.T("admin.operation_failed", ex.Message));
+                return (I18nService.Instance.T("admin.operation_failed", ex.Message), null);
             }
         }
 
@@ -257,57 +269,57 @@ namespace Repository.Controllers
         {
             if (string.IsNullOrEmpty(path))
             {
-                return ("路径不能为空", null);
+                return (I18nService.Instance.T("admin.path_empty"), null);
             }
 
             var fullPath = Path.Combine(repoPath, path.TrimStart('/'));
 
             if (!IsPathValid(repoPath, fullPath))
             {
-                return ("无效的路径", null);
+                return (I18nService.Instance.T("admin.invalid_path"), null);
             }
 
             if (!System.IO.File.Exists(fullPath))
             {
-                return ("文件不存在", null);
+                return (I18nService.Instance.T("admin.file_not_exist"), null);
             }
 
             FileSystem.DeleteFile(fullPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-            _logger.LogInfo($"文件已移至回收站，客户端IP: {clientIP}，路径: {path}");
+            _logger.LogInfo(I18nService.Instance.T("admin.file_recycled_log", clientIP, path));
 
-            return ("文件已移至回收站", null);
+            return (I18nService.Instance.T("admin.file_recycled"), null);
         }
 
         private async Task<(string Message, object? Data)> DeleteDirectory(string? path, string repoPath, string clientIP)
         {
             if (string.IsNullOrEmpty(path))
             {
-                return ("路径不能为空", null);
+                return (I18nService.Instance.T("admin.path_empty"), null);
             }
 
             var fullPath = Path.Combine(repoPath, path.TrimStart('/'));
 
             if (!IsPathValid(repoPath, fullPath))
             {
-                return ("无效的路径", null);
+                return (I18nService.Instance.T("admin.invalid_path"), null);
             }
 
             if (!Directory.Exists(fullPath))
             {
-                return ("目录不存在", null);
+                return (I18nService.Instance.T("admin.dir_not_exist"), null);
             }
 
             FileSystem.DeleteDirectory(fullPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-            _logger.LogInfo($"目录已移至回收站，客户端IP: {clientIP}，路径: {path}");
+            _logger.LogInfo(I18nService.Instance.T("admin.dir_recycled_log", clientIP, path));
 
-            return ("目录已移至回收站", null);
+            return (I18nService.Instance.T("admin.dir_recycled"), null);
         }
 
         private async Task<(string Message, object? Data)> MoveFile(string? oldPath, string? newPath, string repoPath, string clientIP)
         {
             if (string.IsNullOrEmpty(oldPath) || string.IsNullOrEmpty(newPath))
             {
-                return ("路径不能为空", null);
+                return (I18nService.Instance.T("admin.path_empty"), null);
             }
 
             var fullOldPath = Path.Combine(repoPath, oldPath.TrimStart('/'));
@@ -315,12 +327,12 @@ namespace Repository.Controllers
 
             if (!IsPathValid(repoPath, fullOldPath) || !IsPathValid(repoPath, fullNewPath))
             {
-                return ("无效的路径", null);
+                return (I18nService.Instance.T("admin.invalid_path"), null);
             }
 
             if (!System.IO.File.Exists(fullOldPath))
             {
-                return ("源文件不存在", null);
+                return (I18nService.Instance.T("admin.source_file_not_exist"), null);
             }
 
             var newDir = Path.GetDirectoryName(fullNewPath);
@@ -330,16 +342,16 @@ namespace Repository.Controllers
             }
 
             System.IO.File.Move(fullOldPath, fullNewPath);
-            _logger.LogInfo($"移动文件成功，客户端IP: {clientIP}，从 {oldPath} 到 {newPath}");
+            _logger.LogInfo(I18nService.Instance.T("admin.file_moved_log", clientIP, oldPath, newPath));
 
-            return ("文件移动成功", null);
+            return (I18nService.Instance.T("admin.file_moved"), null);
         }
 
         private async Task<(string Message, object? Data)> MoveDirectory(string? oldPath, string? newPath, string repoPath, string clientIP)
         {
             if (string.IsNullOrEmpty(oldPath) || string.IsNullOrEmpty(newPath))
             {
-                return ("路径不能为空", null);
+                return (I18nService.Instance.T("admin.path_empty"), null);
             }
 
             var fullOldPath = Path.Combine(repoPath, oldPath.TrimStart('/'));
@@ -347,12 +359,12 @@ namespace Repository.Controllers
 
             if (!IsPathValid(repoPath, fullOldPath) || !IsPathValid(repoPath, fullNewPath))
             {
-                return ("无效的路径", null);
+                return (I18nService.Instance.T("admin.invalid_path"), null);
             }
 
             if (!Directory.Exists(fullOldPath))
             {
-                return ("源目录不存在", null);
+                return (I18nService.Instance.T("admin.source_dir_not_exist"), null);
             }
 
             var newDir = Path.GetDirectoryName(fullNewPath);
@@ -362,34 +374,34 @@ namespace Repository.Controllers
             }
 
             Directory.Move(fullOldPath, fullNewPath);
-            _logger.LogInfo($"移动目录成功，客户端IP: {clientIP}，从 {oldPath} 到 {newPath}");
+            _logger.LogInfo(I18nService.Instance.T("admin.dir_moved_log", clientIP, oldPath, newPath));
 
-            return ("目录移动成功", null);
+            return (I18nService.Instance.T("admin.dir_moved"), null);
         }
 
         private async Task<(string Message, object? Data)> CreateDirectory(string? path, string repoPath, string clientIP)
         {
             if (string.IsNullOrEmpty(path))
             {
-                return ("路径不能为空", null);
+                return (I18nService.Instance.T("admin.path_empty"), null);
             }
 
             var fullPath = Path.Combine(repoPath, path.TrimStart('/'));
 
             if (!IsPathValid(repoPath, fullPath))
             {
-                return ("无效的路径", null);
+                return (I18nService.Instance.T("admin.invalid_path"), null);
             }
 
             if (Directory.Exists(fullPath))
             {
-                return ("目录已存在", null);
+                return (I18nService.Instance.T("admin.dir_exists"), null);
             }
 
             Directory.CreateDirectory(fullPath);
-            _logger.LogInfo($"创建目录成功，客户端IP: {clientIP}，路径: {path}");
+            _logger.LogInfo(I18nService.Instance.T("admin.dir_created_log", clientIP, path));
 
-            return ("目录创建成功", null);
+            return (I18nService.Instance.T("admin.dir_created"), null);
         }
 
         private async Task<(string Message, object? Data)> ListDirectory(string? path, string repoPath, string clientIP)
@@ -407,12 +419,12 @@ namespace Repository.Controllers
 
             if (!IsPathValid(repoPath, targetPath))
             {
-                return ("无效的路径", null);
+                return (I18nService.Instance.T("admin.invalid_path"), null);
             }
 
             if (!Directory.Exists(targetPath))
             {
-                return ("目录不存在", null);
+                return (I18nService.Instance.T("admin.dir_not_exist"), null);
             }
 
             var directories = Directory.GetDirectories(targetPath)
@@ -434,7 +446,7 @@ namespace Repository.Controllers
                 })
                 .ToList();
 
-            return ("获取目录列表成功", new { directories, files });
+            return (I18nService.Instance.T("admin.dir_list_success"), new { directories, files });
         }
 
         private string GetClientIP()
@@ -500,7 +512,7 @@ namespace Repository.Controllers
 
         private async Task<(string Message, object? Data)> GetLogFiles(string clientIP)
         {
-            _logger.LogInfo($"管理员请求日志文件列表，客户端IP: {clientIP}");
+            _logger.LogInfo(I18nService.Instance.T("admin.log_list_requested", clientIP));
 
             try
             {
@@ -508,7 +520,7 @@ namespace Repository.Controllers
 
                 if (!Directory.Exists(logDirectory))
                 {
-                    return ("获取日志文件列表成功", new { files = new List<object>() });
+                    return (I18nService.Instance.T("admin.log_list_success"), new { files = new List<object>() });
                 }
 
                 var logFiles = Directory.GetFiles(logDirectory, "*.log")
@@ -522,12 +534,12 @@ namespace Repository.Controllers
                     })
                     .ToList();
 
-                return ("获取日志文件列表成功", new { files = logFiles });
+                return (I18nService.Instance.T("admin.log_list_success"), new { files = logFiles });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取日志文件列表失败");
-                return ("获取日志文件列表失败", null);
+                _logger.LogError(ex, I18nService.Instance.T("admin.log_list_failed"));
+                return (I18nService.Instance.T("admin.log_list_failed"), null);
             }
         }
 
@@ -535,21 +547,21 @@ namespace Repository.Controllers
         {
             if (string.IsNullOrEmpty(logFile))
             {
-                return ("日志文件名不能为空", null);
+                return (I18nService.Instance.T("admin.log_name_empty"), null);
             }
 
-            _logger.LogInfo($"管理员请求日志文件，客户端IP: {clientIP}，文件: {logFile}");
+            _logger.LogInfo(I18nService.Instance.T("admin.log_requested", clientIP, logFile));
 
             try
             {
                 if (ContainsIllegalCharacters(logFile))
                 {
-                    return ("日志文件名不合法", null);
+                    return (I18nService.Instance.T("admin.log_name_invalid"), null);
                 }
 
                 if (!logFile.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
                 {
-                    return ("只能访问日志文件", null);
+                    return (I18nService.Instance.T("admin.log_only"), null);
                 }
 
                 var logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "logs");
@@ -557,27 +569,27 @@ namespace Repository.Controllers
 
                 if (!IsPathValid(logDirectory, logFilePath))
                 {
-                    return ("日志文件路径不合法", null);
+                    return (I18nService.Instance.T("admin.log_path_invalid"), null);
                 }
 
                 if (!System.IO.File.Exists(logFilePath))
                 {
-                    return ("日志文件不存在", null);
+                    return (I18nService.Instance.T("admin.log_not_exist"), null);
                 }
 
                 var fileInfo = new System.IO.FileInfo(logFilePath);
                 if (fileInfo.Length > 10 * 1024 * 1024)
                 {
-                    return ("日志文件过大", null);
+                    return (I18nService.Instance.T("admin.log_too_large"), null);
                 }
 
                 var logContent = System.IO.File.ReadAllText(logFilePath);
-                return ("获取日志文件成功", new { content = logContent });
+                return (I18nService.Instance.T("admin.log_get_success"), new { content = logContent });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"获取日志文件失败: {logFile}");
-                return ("获取日志文件失败", null);
+                _logger.LogError(ex, I18nService.Instance.T("admin.log_get_failed"));
+                return (I18nService.Instance.T("admin.log_get_failed"), null);
             }
         }
 
@@ -624,22 +636,22 @@ namespace Repository.Controllers
 
             if (!config.AdminEnabled)
             {
-                return NotFound("管理功能未启用");
+                return NotFound(I18nService.Instance.T("admin.not_enabled"));
             }
 
             var clientIP = GetClientIP();
-            _logger.LogInfo($"管理员上传文件，客户端IP: {clientIP}，路径: {path}，文件: {file?.FileName}");
+            _logger.LogInfo(I18nService.Instance.T("admin.upload_requested", clientIP, path ?? "", file?.FileName ?? ""));
 
             try
             {
                 if (file == null || file.Length == 0)
                 {
-                    return BadRequest("请选择要上传的文件");
+                    return BadRequest(I18nService.Instance.T("admin.upload_select"));
                 }
 
                 if (ContainsIllegalCharacters(file.FileName))
                 {
-                    return BadRequest("文件名不合法");
+                    return BadRequest(I18nService.Instance.T("admin.upload_name_invalid"));
                 }
 
                 var repoPath = config.RepositoryPath;
@@ -652,7 +664,7 @@ namespace Repository.Controllers
 
                 if (!IsPathValid(repoPath, targetFolder))
                 {
-                    return BadRequest("路径不合法");
+                    return BadRequest(I18nService.Instance.T("admin.upload_path_invalid"));
                 }
 
                 if (!Directory.Exists(targetFolder))
@@ -664,13 +676,13 @@ namespace Repository.Controllers
 
                 if (!IsPathValid(repoPath, filePath))
                 {
-                    return BadRequest("文件路径不合法");
+                    return BadRequest(I18nService.Instance.T("admin.upload_file_path_invalid"));
                 }
 
                 var maxUploadSizeBytes = config.MaxUploadSizeMB * 1024 * 1024;
                 if (file.Length > maxUploadSizeBytes)
                 {
-                    return StatusCode(413, $"文件过大，最大允许 {FormatFileSize(maxUploadSizeBytes)}");
+                    return StatusCode(413, I18nService.Instance.T("admin.upload_too_large", FormatFileSize(maxUploadSizeBytes)));
                 }
 
                 if (config.MaxDiskUsagePercent > 0)
@@ -683,7 +695,7 @@ namespace Repository.Controllers
 
                     if (projectedUsagePercent > config.MaxDiskUsagePercent)
                     {
-                        return StatusCode(507, $"磁盘占用超限");
+                        return StatusCode(507, I18nService.Instance.T("admin.upload_disk_full"));
                     }
                 }
 
@@ -692,20 +704,275 @@ namespace Repository.Controllers
                     await file.CopyToAsync(stream);
                 }
 
-                _logger.LogInfo($"文件上传成功，客户端IP: {clientIP}，路径: {filePath}");
+                _logger.LogInfo(I18nService.Instance.T("admin.upload_success_log", clientIP, filePath));
 
                 return Ok(new
                 {
-                    message = "上传成功",
+                    message = I18nService.Instance.T("admin.upload_success"),
                     fileName = file.FileName,
                     fileSize = FormatFileSize(file.Length)
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "文件上传失败");
-                return StatusCode(500, "服务器内部错误");
+                _logger.LogError(ex, I18nService.Instance.T("admin.upload_failed"));
+                return StatusCode(500, I18nService.Instance.T("admin.internal_error"));
             }
+        }
+
+        private async Task<(string Message, object? Data)> GetServerSettings(string clientIP)
+        {
+            _logger.LogInfo(I18nService.Instance.T("admin.settings_requested", clientIP));
+
+            var config = _configManager.GetConfig();
+            var rateLimitService = HttpContext.RequestServices.GetRequiredService<RateLimitProtectionService>();
+            var (currentRequests, limit) = rateLimitService.GetCurrentStats();
+
+            return (I18nService.Instance.T("admin.settings_get_success"), new
+            {
+                settings = new
+                {
+                    DDoSProtection = config.DDoSProtection,
+                    MaxRequestsPerMinute = config.MaxRequestsPerMinute,
+                    BlockDurationMinutes = config.BlockDurationMinutes,
+                    RateLimitProtection = config.RateLimitProtection,
+                    RateLimitRequestsPerSecond = config.RateLimitRequestsPerSecond,
+                    RateLimitPauseMinutes = config.RateLimitPauseMinutes,
+                    UploadEnabled = config.UploadEnabled,
+                    MaxUploadSizeMB = config.MaxUploadSizeMB,
+                    MaxDiskUsagePercent = config.MaxDiskUsagePercent,
+                    AllowOverwrite = config.AllowOverwrite,
+                    AllowRootUpload = config.AllowRootUpload,
+                    PreviewEnabled = config.PreviewEnabled,
+                    MaxDownloadSizeMB = config.MaxDownloadSizeMB,
+                    HttpEnabled = config.HttpEnabled,
+                    HttpsEnabled = config.HttpsEnabled,
+                    HttpsRedirectEnabled = config.HttpsRedirectEnabled,
+                    Notification = config.Notification,
+                    AutoRestart = config.AutoRestart,
+                    MaxRestartAttempts = config.MaxRestartAttempts
+                },
+                rateLimitStatus = new
+                {
+                    IsPaused = rateLimitService.IsPaused,
+                    RemainingSeconds = rateLimitService.RemainingPauseSeconds,
+                    CurrentRequests = currentRequests,
+                    Limit = limit
+                }
+            });
+        }
+
+        private async Task<(string Message, object? Data)> UpdateServerSettings(Dictionary<string, object?>? settings, string clientIP)
+        {
+            if (settings == null || settings.Count == 0)
+            {
+                return (I18nService.Instance.T("admin.settings_empty"), null);
+            }
+
+            _logger.LogInfo(I18nService.Instance.T("admin.settings_update_log", clientIP));
+
+            try
+            {
+                var config = _configManager.GetConfig();
+                var updatedFields = new List<string>();
+
+                foreach (var kvp in settings)
+                {
+                    switch (kvp.Key)
+                    {
+                        case "DDoSProtection":
+                            if (kvp.Value is bool ddosValue)
+                            {
+                                config.DDoSProtection = ddosValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_ddos"));
+                            }
+                            break;
+
+                        case "MaxRequestsPerMinute":
+                            if (int.TryParse(kvp.Value?.ToString(), out var maxReq))
+                            {
+                                config.MaxRequestsPerMinute = maxReq;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_max_requests"));
+                            }
+                            break;
+
+                        case "BlockDurationMinutes":
+                            if (int.TryParse(kvp.Value?.ToString(), out var blockDur))
+                            {
+                                config.BlockDurationMinutes = blockDur;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_block_duration"));
+                            }
+                            break;
+
+                        case "RateLimitProtection":
+                            if (kvp.Value is bool rateLimitValue)
+                            {
+                                config.RateLimitProtection = rateLimitValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_rate_limit"));
+                            }
+                            break;
+
+                        case "RateLimitRequestsPerSecond":
+                            if (int.TryParse(kvp.Value?.ToString(), out var rateLimitReq))
+                            {
+                                config.RateLimitRequestsPerSecond = rateLimitReq;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_rate_limit_requests"));
+                            }
+                            break;
+
+                        case "RateLimitPauseMinutes":
+                            if (int.TryParse(kvp.Value?.ToString(), out var pauseMin))
+                            {
+                                config.RateLimitPauseMinutes = pauseMin;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_rate_limit_pause"));
+                            }
+                            break;
+
+                        case "UploadEnabled":
+                            if (kvp.Value is bool uploadValue)
+                            {
+                                config.UploadEnabled = uploadValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_upload"));
+                            }
+                            break;
+
+                        case "MaxUploadSizeMB":
+                            if (int.TryParse(kvp.Value?.ToString(), out var maxSize))
+                            {
+                                config.MaxUploadSizeMB = maxSize;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_max_upload_size"));
+                            }
+                            break;
+
+                        case "MaxDiskUsagePercent":
+                            if (int.TryParse(kvp.Value?.ToString(), out var diskPercent))
+                            {
+                                config.MaxDiskUsagePercent = diskPercent;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_max_disk_usage"));
+                            }
+                            break;
+
+                        case "AllowOverwrite":
+                            if (kvp.Value is bool overwriteValue)
+                            {
+                                config.AllowOverwrite = overwriteValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_allow_overwrite"));
+                            }
+                            break;
+
+                        case "AllowRootUpload":
+                            if (kvp.Value is bool rootUploadValue)
+                            {
+                                config.AllowRootUpload = rootUploadValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_allow_root_upload"));
+                            }
+                            break;
+
+                        case "PreviewEnabled":
+                            if (kvp.Value is bool previewValue)
+                            {
+                                config.PreviewEnabled = previewValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_preview"));
+                            }
+                            break;
+
+                        case "MaxDownloadSizeMB":
+                            if (int.TryParse(kvp.Value?.ToString(), out var maxDownload))
+                            {
+                                config.MaxDownloadSizeMB = maxDownload;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_max_download_size"));
+                            }
+                            break;
+
+                        case "HttpEnabled":
+                            if (kvp.Value is bool httpValue)
+                            {
+                                config.HttpEnabled = httpValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_http"));
+                            }
+                            break;
+
+                        case "HttpsEnabled":
+                            if (kvp.Value is bool httpsValue)
+                            {
+                                config.HttpsEnabled = httpsValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_https"));
+                            }
+                            break;
+
+                        case "HttpsRedirectEnabled":
+                            if (kvp.Value is bool httpsRedirectValue)
+                            {
+                                config.HttpsRedirectEnabled = httpsRedirectValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_https_redirect"));
+                            }
+                            break;
+
+                        case "Notification":
+                            if (kvp.Value is bool notifyValue)
+                            {
+                                config.Notification = notifyValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_notification"));
+                            }
+                            break;
+
+                        case "AutoRestart":
+                            if (kvp.Value is bool restartValue)
+                            {
+                                config.AutoRestart = restartValue;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_auto_restart"));
+                            }
+                            break;
+
+                        case "MaxRestartAttempts":
+                            if (int.TryParse(kvp.Value?.ToString(), out var maxAttempts))
+                            {
+                                config.MaxRestartAttempts = maxAttempts;
+                                updatedFields.Add(I18nService.Instance.T("admin.field_max_restart_attempts"));
+                            }
+                            break;
+                    }
+                }
+
+                _configManager.SaveConfig(config);
+                _logger.LogInfo(I18nService.Instance.T("admin.settings_updated_log", string.Join(", ", updatedFields)));
+
+                return (I18nService.Instance.T("admin.settings_updated", string.Join(", ", updatedFields)), new { updatedFields });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, I18nService.Instance.T("admin.settings_update_failed", ex.Message));
+                return (I18nService.Instance.T("admin.settings_update_failed", ex.Message), null);
+            }
+        }
+
+        private async Task<(string Message, object? Data)> GetRateLimitStatus(string clientIP)
+        {
+            var rateLimitService = HttpContext.RequestServices.GetRequiredService<RateLimitProtectionService>();
+            var (currentRequests, limit) = rateLimitService.GetCurrentStats();
+
+            return (I18nService.Instance.T("admin.rate_limit_status_success"), new
+            {
+                IsPaused = rateLimitService.IsPaused,
+                RemainingSeconds = rateLimitService.RemainingPauseSeconds,
+                CurrentRequests = currentRequests,
+                Limit = limit
+            });
+        }
+
+        private async Task<(string Message, object? Data)> ForceResumeRateLimit(string clientIP)
+        {
+            _logger.LogInfo(I18nService.Instance.T("admin.rate_limit_resume_log", clientIP));
+
+            var rateLimitService = HttpContext.RequestServices.GetRequiredService<RateLimitProtectionService>();
+            
+            if (!rateLimitService.IsPaused)
+            {
+                return (I18nService.Instance.T("admin.rate_limit_not_paused"), null);
+            }
+
+            rateLimitService.ForceResume();
+            return (I18nService.Instance.T("admin.rate_limit_resumed"), null);
         }
 
         private string GetAdminHtml()
@@ -843,6 +1110,7 @@ namespace Repository.Controllers
             <h1>Repository 管理</h1>
             <div class=""header-actions"">
                 <button onclick=""showLogsModal()"" style=""background: #17a2b8; margin-right: 10px;"">查看日志</button>
+                <button onclick=""showSettingsModal()"" style=""background: #28a745; margin-right: 10px;"">服务器设置</button>
                 <button onclick=""logout()"">退出登录</button>
             </div>
         </div>
@@ -915,6 +1183,24 @@ namespace Repository.Controllers
             </div>
             <div class=""modal-footer"">
                 <button class=""btn-cancel"" onclick=""closeLogsModal()"">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class=""modal"" id=""settingsModal"">
+        <div class=""modal-content"" style=""width: 600px; max-height: 80vh; margin: 5vh auto; overflow: hidden; display: flex; flex-direction: column;"">
+            <div class=""modal-header""><h3>服务器设置</h3></div>
+            <div class=""modal-body"" style=""flex: 1; overflow: auto; padding: 20px;"">
+                <div id=""settingsContent"">加载中...</div>
+                <div id=""rateLimitStatus"" style=""margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; display: none;"">
+                    <h4 style=""margin-bottom: 10px;"">限流状态</h4>
+                    <div id=""rateLimitInfo""></div>
+                    <button id=""forceResumeBtn"" style=""margin-top: 10px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;"" onclick=""forceResumeRateLimit()"">强制恢复服务</button>
+                </div>
+            </div>
+            <div class=""modal-footer"">
+                <button class=""btn-cancel"" onclick=""closeSettingsModal()"">关闭</button>
+                <button class=""btn-confirm"" onclick=""saveSettings()"">保存设置</button>
             </div>
         </div>
     </div>
@@ -1071,7 +1357,7 @@ async function login() {
     }
 }
 
-async function sendOperation(action, path, newPath) {
+async function sendOperation(action, path, newPath, settings) {
     return new Promise((resolve, reject) => {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             reject(new Error('未连接'));
@@ -1082,7 +1368,8 @@ async function sendOperation(action, path, newPath) {
             SessionId: sessionId,
             Action: action,
             Path: path,
-            NewPath: newPath
+            NewPath: newPath,
+            Settings: settings
         };
 
         const handler = async (event) => {
@@ -1380,6 +1667,180 @@ function showLogsModal() {
 
 function closeLogsModal() {
     document.getElementById('logsModal').style.display = 'none';
+}
+
+function showSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'block';
+    loadSettings();
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'none';
+}
+
+async function loadSettings() {
+    const content = document.getElementById('settingsContent');
+    content.innerHTML = '加载中...';
+
+    try {
+        const response = await sendOperation('get_settings', null, null);
+
+        if (response.Success && response.Data) {
+            const settings = response.Data.settings;
+            const rateLimitStatus = response.Data.rateLimitStatus;
+
+            let html = '<div style=""display: grid; gap: 15px;"">';
+            
+            html += '<fieldset style=""border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;"">';
+            html += '<legend style=""font-weight: bold; padding: 0 10px;"">DDoS 防护</legend>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""DDoSProtection"" ' + (settings.DDoSProtection ? 'checked' : '') + '>';
+            html += '<span>启用 DDoS 防护</span></label>';
+            html += '<div style=""margin-bottom: 10px;""><label>每分钟最大请求数: </label>';
+            html += '<input type=""number"" id=""MaxRequestsPerMinute"" value=""' + settings.MaxRequestsPerMinute + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '<div><label>封禁时长(分钟): </label>';
+            html += '<input type=""number"" id=""BlockDurationMinutes"" value=""' + settings.BlockDurationMinutes + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '</fieldset>';
+
+            html += '<fieldset style=""border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;"">';
+            html += '<legend style=""font-weight: bold; padding: 0 10px;"">限流保护</legend>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""RateLimitProtection"" ' + (settings.RateLimitProtection ? 'checked' : '') + '>';
+            html += '<span>启用限流保护</span></label>';
+            html += '<div style=""margin-bottom: 10px;""><label>每秒最大请求数: </label>';
+            html += '<input type=""number"" id=""RateLimitRequestsPerSecond"" value=""' + settings.RateLimitRequestsPerSecond + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '<div><label>暂停时长(分钟): </label>';
+            html += '<input type=""number"" id=""RateLimitPauseMinutes"" value=""' + settings.RateLimitPauseMinutes + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '</fieldset>';
+
+            html += '<fieldset style=""border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;"">';
+            html += '<legend style=""font-weight: bold; padding: 0 10px;"">文件上传</legend>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""UploadEnabled"" ' + (settings.UploadEnabled ? 'checked' : '') + '>';
+            html += '<span>启用文件上传</span></label>';
+            html += '<div style=""margin-bottom: 10px;""><label>最大上传大小(MB): </label>';
+            html += '<input type=""number"" id=""MaxUploadSizeMB"" value=""' + settings.MaxUploadSizeMB + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '<div style=""margin-bottom: 10px;""><label>最大磁盘占用(%): </label>';
+            html += '<input type=""number"" id=""MaxDiskUsagePercent"" value=""' + settings.MaxDiskUsagePercent + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""AllowOverwrite"" ' + (settings.AllowOverwrite ? 'checked' : '') + '>';
+            html += '<span>允许覆盖文件</span></label>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px;"">';
+            html += '<input type=""checkbox"" id=""AllowRootUpload"" ' + (settings.AllowRootUpload ? 'checked' : '') + '>';
+            html += '<span>允许根目录上传</span></label>';
+            html += '</fieldset>';
+
+            html += '<fieldset style=""border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;"">';
+            html += '<legend style=""font-weight: bold; padding: 0 10px;"">文件预览与下载</legend>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""PreviewEnabled"" ' + (settings.PreviewEnabled ? 'checked' : '') + '>';
+            html += '<span>启用文件预览</span></label>';
+            html += '<div><label>最大下载大小(MB): </label>';
+            html += '<input type=""number"" id=""MaxDownloadSizeMB"" value=""' + settings.MaxDownloadSizeMB + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '</fieldset>';
+
+            html += '<fieldset style=""border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;"">';
+            html += '<legend style=""font-weight: bold; padding: 0 10px;"">网络设置</legend>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""HttpEnabled"" ' + (settings.HttpEnabled ? 'checked' : '') + '>';
+            html += '<span>启用 HTTP</span></label>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""HttpsEnabled"" ' + (settings.HttpsEnabled ? 'checked' : '') + '>';
+            html += '<span>启用 HTTPS</span></label>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px;"">';
+            html += '<input type=""checkbox"" id=""HttpsRedirectEnabled"" ' + (settings.HttpsRedirectEnabled ? 'checked' : '') + '>';
+            html += '<span>启用 HTTPS 重定向</span></label>';
+            html += '</fieldset>';
+
+            html += '<fieldset style=""border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;"">';
+            html += '<legend style=""font-weight: bold; padding: 0 10px;"">系统设置</legend>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""Notification"" ' + (settings.Notification ? 'checked' : '') + '>';
+            html += '<span>启用系统通知(Windows)</span></label>';
+            html += '<label style=""display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"">';
+            html += '<input type=""checkbox"" id=""AutoRestart"" ' + (settings.AutoRestart ? 'checked' : '') + '>';
+            html += '<span>启用自动重启</span></label>';
+            html += '<div><label>最大重启次数: </label>';
+            html += '<input type=""number"" id=""MaxRestartAttempts"" value=""' + settings.MaxRestartAttempts + '"" style=""width: 100px; padding: 5px;""></div>';
+            html += '</fieldset>';
+
+            html += '</div>';
+            content.innerHTML = html;
+
+            const rateLimitStatusDiv = document.getElementById('rateLimitStatus');
+            const rateLimitInfo = document.getElementById('rateLimitInfo');
+            const forceResumeBtn = document.getElementById('forceResumeBtn');
+
+            if (settings.RateLimitProtection) {
+                rateLimitStatusDiv.style.display = 'block';
+                if (rateLimitStatus.IsPaused) {
+                    rateLimitInfo.innerHTML = '<span style=""color: #dc3545; font-weight: bold;"">⚠ 服务已暂停</span><br>剩余时间: ' + rateLimitStatus.RemainingSeconds + ' 秒';
+                    forceResumeBtn.style.display = 'inline-block';
+                } else {
+                    rateLimitInfo.innerHTML = '<span style=""color: #28a745;"">✓ 服务正常运行</span><br>当前请求数: ' + rateLimitStatus.CurrentRequests + ' / ' + rateLimitStatus.Limit + ' (每秒)';
+                    forceResumeBtn.style.display = 'none';
+                }
+            } else {
+                rateLimitStatusDiv.style.display = 'none';
+            }
+        } else {
+            content.innerHTML = '<p style=""color: #dc3545;"">加载设置失败: ' + (response.Message || '未知错误') + '</p>';
+        }
+    } catch (e) {
+        content.innerHTML = '<p style=""color: #dc3545;"">加载设置失败: ' + e.message + '</p>';
+    }
+}
+
+async function saveSettings() {
+    const settings = {
+        DDoSProtection: document.getElementById('DDoSProtection').checked,
+        MaxRequestsPerMinute: parseInt(document.getElementById('MaxRequestsPerMinute').value) || 100,
+        BlockDurationMinutes: parseInt(document.getElementById('BlockDurationMinutes').value) || 30,
+        RateLimitProtection: document.getElementById('RateLimitProtection').checked,
+        RateLimitRequestsPerSecond: parseInt(document.getElementById('RateLimitRequestsPerSecond').value) || 50,
+        RateLimitPauseMinutes: parseInt(document.getElementById('RateLimitPauseMinutes').value) || 5,
+        UploadEnabled: document.getElementById('UploadEnabled').checked,
+        MaxUploadSizeMB: parseInt(document.getElementById('MaxUploadSizeMB').value) || 100,
+        MaxDiskUsagePercent: parseInt(document.getElementById('MaxDiskUsagePercent').value) || 0,
+        AllowOverwrite: document.getElementById('AllowOverwrite').checked,
+        AllowRootUpload: document.getElementById('AllowRootUpload').checked,
+        PreviewEnabled: document.getElementById('PreviewEnabled').checked,
+        MaxDownloadSizeMB: parseInt(document.getElementById('MaxDownloadSizeMB').value) || 100,
+        HttpEnabled: document.getElementById('HttpEnabled').checked,
+        HttpsEnabled: document.getElementById('HttpsEnabled').checked,
+        HttpsRedirectEnabled: document.getElementById('HttpsRedirectEnabled').checked,
+        Notification: document.getElementById('Notification').checked,
+        AutoRestart: document.getElementById('AutoRestart').checked,
+        MaxRestartAttempts: parseInt(document.getElementById('MaxRestartAttempts').value) || 3
+    };
+
+    try {
+        const response = await sendOperation('update_settings', null, null, settings);
+        if (response.Success) {
+            alert('设置已保存: ' + response.Message);
+            loadSettings();
+        } else {
+            alert('保存失败: ' + (response.Message || '未知错误'));
+        }
+    } catch (e) {
+        alert('保存失败: ' + e.message);
+    }
+}
+
+async function forceResumeRateLimit() {
+    if (!confirm('确定要强制恢复服务吗？')) return;
+
+    try {
+        const response = await sendOperation('force_resume_rate_limit', null, null);
+        if (response.Success) {
+            alert(response.Message);
+            loadSettings();
+        } else {
+            alert('操作失败: ' + (response.Message || '未知错误'));
+        }
+    } catch (e) {
+        alert('操作失败: ' + e.message);
+    }
 }
 
 async function loadLogFiles() {

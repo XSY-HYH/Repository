@@ -112,13 +112,19 @@ namespace Repository.Services
         
         private int IncrementAccessCount()
         {
-            if (_configManager == null)
-                return _sessionAccessCount;
+            _sessionAccessCount++;
+            return _configManager?.GetConfig().AccessCount + _sessionAccessCount ?? _sessionAccessCount;
+        }
+
+        public void SaveAccessCount()
+        {
+            if (_configManager == null || _sessionAccessCount == 0)
+                return;
             
             var config = _configManager.GetConfig();
-            config.AccessCount++;
+            config.AccessCount += _sessionAccessCount;
             _configManager.SaveConfig(config);
-            return config.AccessCount;
+            _sessionAccessCount = 0;
         }
         
         private (string deviceType, string browser) ParseUserAgent(string userAgent)
@@ -275,6 +281,7 @@ namespace Repository.Services
         {
             _flushTimer?.Dispose();
             FlushLogs(null);
+            SaveAccessCount();
         }
         
         private void WriteLog(string level, string message)

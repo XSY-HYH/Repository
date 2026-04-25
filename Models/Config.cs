@@ -18,6 +18,11 @@ namespace Repository.Models
         public int BlockDurationMinutes { get; set; } = 30;
         public string BlockedIPs { get; set; } = "";
         
+        // 限流保护配置
+        public bool RateLimitProtection { get; set; } = false;
+        public int RateLimitRequestsPerSecond { get; set; } = 50;
+        public int RateLimitPauseMinutes { get; set; } = 5;
+        
         // 文件上传配置
         public bool UploadEnabled { get; set; } = false;
         public int MaxUploadSizeMB { get; set; } = 50;
@@ -67,5 +72,10 @@ namespace Repository.Models
         
         // 访问计数
         public int AccessCount { get; set; } = 0;
+        
+        // 自动重启配置
+        public bool AutoRestart { get; set; } = false;
+        public int MaxRestartAttempts { get; set; } = 3;
+        public int RestartCount { get; set; } = 0;
     }
 }

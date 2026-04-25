@@ -41,20 +41,28 @@ namespace Repository.Services
 
         public void SaveConfig(Config config)
         {
-            // 验证配置
+            if (_disposed)
+                return;
+
             ValidateConfig(config);
             
             lock (_configLock)
             {
                 _config = config;
                 
-                // 保存时临时禁用文件监视器，避免触发自身更改事件
-                if (_fileWatcher != null)
-                    _fileWatcher.EnableRaisingEvents = false;
+                if (_fileWatcher != null && !_disposed)
+                {
+                    try
+                    {
+                        _fileWatcher.EnableRaisingEvents = false;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
                 
                 try
                 {
-                    // 使用 JsonSerializer 自动构建 JSON 字符串
                     var options = new JsonSerializerOptions
                     {
                         WriteIndented = true,
@@ -68,8 +76,16 @@ namespace Repository.Services
                 }
                 finally
                 {
-                    if (_fileWatcher != null)
-                        _fileWatcher.EnableRaisingEvents = true;
+                    if (_fileWatcher != null && !_disposed)
+                    {
+                        try
+                        {
+                            _fileWatcher.EnableRaisingEvents = true;
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
+                    }
                 }
             }
         }

@@ -60,6 +60,19 @@ function loadFileList() {
             
             tbody.innerHTML = '';
             
+            if (data.directoryHash) {
+                const titleElement = document.querySelector('h1');
+                const hashSpan = document.createElement('span');
+                hashSpan.className = 'directory-hash';
+                hashSpan.textContent = data.directoryHash.substring(0, 8);
+                hashSpan.title = data.directoryHash + '\n' + (t('click_to_copy') || '点击复制');
+                hashSpan.onclick = function() {
+                    copyToClipboard(data.directoryHash, this);
+                };
+                titleElement.appendChild(document.createTextNode(' '));
+                titleElement.appendChild(hashSpan);
+            }
+            
             const isEmpty = (data.directories.length === 0 && data.files.length === 0);
             if (isEmpty) {
                 tbody.innerHTML = '<tr><td colspan="3" class="empty">' + t('empty_directory') + '</td></tr>';
@@ -173,6 +186,18 @@ function loadFileList() {
                     }
                     nameCell.appendChild(copyButton);
                     
+                    if (file.sha256) {
+                        const sha256Span = document.createElement('span');
+                        sha256Span.className = 'file-sha256';
+                        sha256Span.textContent = file.sha256.substring(0, 8);
+                        sha256Span.title = file.sha256 + '\n' + (t('click_to_copy') || '点击复制');
+                        sha256Span.onclick = function(e) {
+                            e.stopPropagation();
+                            copyToClipboard(file.sha256, this);
+                        };
+                        nameCell.appendChild(sha256Span);
+                    }
+                    
                     const dateCell = document.createElement('td');
                     dateCell.className = 'date';
                     dateCell.textContent = file.lastModified;
@@ -247,6 +272,53 @@ function copyDownloadLink(url, buttonElement) {
             console.error(t('copy_failed') + ':', err);
             updateButtonStatus(false);
         }
+    }
+}
+
+function copyToClipboard(text, element) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+            .then(function() {
+                if (element) {
+                    const original = element.textContent;
+                    element.textContent = '✓';
+                    element.style.color = '#198754';
+                    setTimeout(() => {
+                        element.textContent = original;
+                        element.style.color = '';
+                    }, 1500);
+                }
+            })
+            .catch(function() {
+                fallbackCopy(text, element);
+            });
+    } else {
+        fallbackCopy(text, element);
+    }
+}
+
+function fallbackCopy(text, element) {
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-999999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        if (element) {
+            const original = element.textContent;
+            element.textContent = '✓';
+            element.style.color = '#198754';
+            setTimeout(() => {
+                element.textContent = original;
+                element.style.color = '';
+            }, 1500);
+        }
+    } catch (err) {
+        console.error(t('copy_failed') + ':', err);
     }
 }
 

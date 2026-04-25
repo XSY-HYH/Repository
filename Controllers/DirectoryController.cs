@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Repository.Models;
 using Repository.Services;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Repository.Controllers
 {
@@ -91,6 +93,8 @@ namespace Repository.Controllers
                     ProcessDirectoriesAsync(repoPath, fullPath, path, listing, config),
                     ProcessFilesAsync(repoPath, fullPath, path, listing, config)
                 );
+
+                listing.DirectoryHash = await Task.Run(() => ComputeDirectoryHash(fullPath));
 
                 _logger.LogInfo($"成功返回目录列表，客户端IP: {clientIP}，路径: {path}");
                 return Ok(listing);
@@ -226,6 +230,7 @@ namespace Repository.Controllers
                 
                 var relativeUrl = GetRelativeUrl(relativePath, fileName, false);
                 var fileInfo = await Task.Run(() => new System.IO.FileInfo(file));
+                var fileSha256 = await Task.Run(() => ComputeFileSha256(file));
                 
                 lock (listing.Files)
                 {
@@ -236,6 +241,7 @@ namespace Repository.Controllers
                         LastModified = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         Size = fileInfo.Length,
                         Previewable = isPreviewable,
+                        Sha256 = fileSha256,
                         CanView = true,
                         CanDownload = true,
                         CanPreview = isPreviewable
@@ -430,6 +436,49 @@ namespace Repository.Controllers
             }
             
             return false;
+        }
+
+        private static string ComputeFileSha256(string filePath)
+        {
+            using var sha256 = SHA256.Create();
+            using var stream = System.IO.File.OpenRead(filePath);
+            var hash = sha256.ComputeHash(stream);
+            return Convert.ToHexString(hash).ToLower();
+        }
+
+        private static string ComputeDirectoryHash(string directoryPath)
+        {
+            using var sha256 = SHA256.Create();
+            using var ms = new MemoryStream();
+            using var writer = new BinaryWriter(ms);
+
+            try
+            {
+                var dirs = Directory.GetDirectories(directoryPath)
+                    .OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase);
+                foreach (var dir in dirs)
+                {
+                    var name = Path.GetFileName(dir);
+                    writer.Write(Encoding.UTF8.GetBytes(name));
+                    writer.Write(System.IO.File.GetLastWriteTimeUtc(dir).Ticks);
+                }
+
+                var files = Directory.GetFiles(directoryPath)
+                    .OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase);
+                foreach (var file in files)
+                {
+                    var name = Path.GetFileName(file);
+                    writer.Write(Encoding.UTF8.GetBytes(name));
+                    writer.Write(new System.IO.FileInfo(file).Length);
+                    writer.Write(System.IO.File.GetLastWriteTimeUtc(file).Ticks);
+                }
+            }
+            catch
+            {
+            }
+
+            var hash = sha256.ComputeHash(ms.ToArray());
+            return Convert.ToHexString(hash).ToLower();
         }
     }
 }

@@ -77,6 +77,7 @@ namespace Repository
             builder.Services.AddSingleton<ConfigManager>();
             builder.Services.AddSingleton<IPBlockingService>();
             builder.Services.AddSingleton<DDoSProtectionService>();
+            builder.Services.AddSingleton<RateLimitProtectionService>();
             builder.Services.AddSingleton<BlacklistService>();
             builder.Services.AddSingleton<FileWatcherService>();
             builder.Services.AddSingleton<TemporaryLinkService>();
@@ -124,6 +125,7 @@ namespace Repository
             app.UseSecurityHeaders();
             app.UseIPBlocking();
             app.UseRateLimiting();
+            app.UseRateLimitProtection();
             app.UseSubdirectoryRouting();
 
             app.UseWebSockets(new WebSocketOptions

@@ -152,6 +152,9 @@ The main configuration file `Config.json` supports the following options:
 | DDoSProtection | bool | true | DDoS protection |
 | MaxRequestsPerMinute | int | 100 | Max requests per minute |
 | BlockDurationMinutes | int | 30 | Block duration |
+| RateLimitProtection | bool | false | Rate limit protection |
+| RateLimitRequestsPerSecond | int | 50 | Max requests per second |
+| RateLimitPauseMinutes | int | 5 | Pause duration when rate limit exceeded |
 
 #### Path Blacklist Format
 Use `|` (pipe) to separate multiple entries, supporting the following formats:
@@ -207,6 +210,12 @@ $RECYCLE.BIN|System Volume Information|*.log|%/node_modules|temp/*
 | HttpsRedirectEnabled | bool | false | HTTP redirect |
 | HttpEnabled | bool | true | Enable HTTP |
 | Domain | string | "" | Server domain (auto certificate signing) |
+
+### Auto-Restart Configuration
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| AutoRestart | bool | false | Enable auto-restart on crash |
+| MaxRestartAttempts | int | 3 | Maximum restart attempts |
 
 ## Directory Protection Configuration
 

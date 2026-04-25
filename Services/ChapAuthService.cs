@@ -279,5 +279,6 @@ namespace Repository.Services
         public string? Path { get; set; }
         public string? NewPath { get; set; }
         public string? TargetPath { get; set; }
+        public Dictionary<string, object?>? Settings { get; set; }
     }
 }
