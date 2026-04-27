@@ -22,7 +22,6 @@ en:
     success: '目录浏览请求处理成功，客户端IP: {0}，路径: {1}'
   watcher:
     started: File watcher started
-    protection_started: Protection service started
   http:
     enabled: HTTP enabled, listening on {0}
     disabled: HTTP disabled
@@ -121,7 +120,6 @@ en:
     url_decode_failed: 'URL解码失败，使用原始路径: {0}，错误: {1}'
     illegal_chars: '检测到非法字符的文件预览请求，客户端IP: {0}，文件路径: {1}'
     permission_config: '尝试预览权限配置文件，客户端IP: {0}，文件路径: {1}'
-    protection_lock: '尝试预览保护锁文件，客户端IP: {0}，文件路径: {1}'
     system_path: '尝试预览系统路径文件，客户端IP: {0}，文件路径: {1}'
     feature_disabled: '文件预览功能已禁用，客户端IP: {0}，文件路径: {1}'
     outside_repo: '安全警告！尝试预览仓库外文件，客户端IP: {0}，文件路径: {1}'
@@ -142,7 +140,6 @@ en:
     url_decode_failed: 'URL解码失败，使用原始路径: {0}，错误: {1}'
     illegal_chars: '检测到非法字符的文件下载请求，客户端IP: {0}，文件路径: {1}'
     permission_config: '尝试下载权限配置文件，客户端IP: {0}，文件路径: {1}'
-    protection_lock: '尝试下载保护锁文件，客户端IP: {0}，文件路径: {1}'
     system_path: '尝试下载系统路径文件，客户端IP: {0}，文件路径: {1}'
     outside_repo: '安全警告！尝试下载仓库外文件，客户端IP: {0}，文件路径: {1}'
     protected_file: '受保护文件下载被拒绝，客户端IP: {0}，文件路径: {1}'
@@ -160,8 +157,6 @@ en:
     illegal_chars: '检测到非法字符的路径请求，客户端IP: {0}，路径: {1}'
     outside_repo: '安全警告！尝试访问仓库外路径，客户端IP: {0}，路径: {1}'
     system_path: '尝试访问系统路径，客户端IP: {0}，路径: {1}'
-    secure_denied: 'Secure保护目录访问被拒绝，客户端IP: {0}，路径: {1}'
-    token_denied: 'Token保护目录访问被拒绝，客户端IP: {0}，路径: {1}'
     not_exist: '目录不存在，客户端IP: {0}，路径: {1}'
     success: '目录列表返回成功，客户端IP: {0}，路径: {1}'
   admin:
@@ -248,21 +243,6 @@ en:
     operation_success: Operation successful
     json_parse_error: Data format error
     json_parse_error_log: 'CHAP operation failed: JSON parse error'
-  protection:
-    disabled: Protection feature is disabled, skipping protection service startup
-    started: Protection service started watching for Protectionlock.json files
-    stopped: Protection service stopped
-    scanned: Scanned {0} Protectionlock.json files
-    scan_error: 'Error scanning Protectionlock.json files: {0}'
-    hash_updated: 'Updated Protectionlock.json with hash for: {0}'
-    lock_loaded: 'Loaded protection lock for path: {0} (method: {1})'
-    lock_load_error: 'Error loading Protectionlock.json from {0}: {1}'
-    invalid_secure_config: 'Invalid secure auth configuration for: {0}'
-    client_not_registered: 'Client not registered: {0}, secure auth will not work
-      until client registers'
-    handler_created: 'Secure handler created for: {0}'
-    lock_changed: 'Protectionlock.json changed: {0}'
-    lock_removed: 'Removed protection lock for path: {0}'
   cert:
     found: 'Found existing self-signed certificate: {0}, {1}'
     generating: 'Generating self-signed certificate, domain: {0}'
@@ -277,19 +257,6 @@ en:
     enabled: '[+] Windows notification enabled'
     not_windows: '[!] Non-Windows system, notification feature disabled'
     send_failed: '[!] Failed to send notification: {0}'
-  secure_session:
-    created: 'Created secure session: {0} for client: {1}, path: {2}'
-    removed: 'Removed secure session: {0}'
-    cleaned: Cleaned up {0} expired secure sessions
-  key:
-    loaded: Loaded existing server key pair
-    generated: Generated new server key pair
-    init_failed: Failed to initialize keys, generating new key pair
-    client_registered: 'Registered client public key: {0}'
-    client_register_failed: 'Failed to register client public key: {0}'
-    client_not_found: 'Client public key not found: {0}'
-    token_not_found: 'Shared token not found: {0}'
-    client_removed: 'Removed client: {0}'
   throttling:
     permanent_block: 'IP {0} permanently blocked: exceeded maximum requests per second'
     temp_block: 'IP {0} temporarily blocked: exceeded alarm threshold per second'
@@ -448,7 +415,6 @@ zh:
     dir_created: '已创建仓库目录: {0}'
   watcher:
     started: 文件监视器已启动
-    protection_started: 保护服务已启动
   http:
     enabled: HTTP已启用，监听{0}
     disabled: HTTP已禁用
@@ -575,20 +541,6 @@ zh:
     operation_success: 操作成功
     json_parse_error: 数据格式错误
     json_parse_error_log: CHAP操作失败：JSON解析错误
-  protection:
-    disabled: 保护功能已禁用，跳过保护服务启动
-    started: 保护服务已开始监视 Protectionlock.json 文件
-    stopped: 保护服务已停止
-    scanned: 已扫描 {0} 个 Protectionlock.json 文件
-    scan_error: '扫描 Protectionlock.json 文件时出错: {0}'
-    hash_updated: '已更新 Protectionlock.json 的哈希值: {0}'
-    lock_loaded: '已加载路径的保护锁: {0} (方法: {1})'
-    lock_load_error: '从 {0} 加载 Protectionlock.json 失败: {1}'
-    invalid_secure_config: '无效的安全认证配置: {0}'
-    client_not_registered: '客户端未注册: {0}，安全认证将在客户端注册后才能工作'
-    handler_created: 已为 {0} 创建安全处理器
-    lock_changed: 'Protectionlock.json 已变更: {0}'
-    lock_removed: '已移除路径的保护锁: {0}'
   cert:
     found: '发现已存在的自签名证书: {0}, {1}'
     generating: '正在生成自签名证书，域名: {0}'
@@ -602,19 +554,6 @@ zh:
     enabled: '[+] Windows通知已启用'
     not_windows: '[!] 非Windows系统，通知功能已禁用'
     send_failed: '[!] 发送通知失败: {0}'
-  secure_session:
-    created: '已创建安全会话: {0}，客户端: {1}，路径: {2}'
-    removed: '已移除安全会话: {0}'
-    cleaned: 已清理 {0} 个过期的安全会话
-  key:
-    loaded: 已加载现有服务器密钥对
-    generated: 已生成新的服务器密钥对
-    init_failed: 初始化密钥失败，生成新密钥对
-    client_registered: '已注册客户端公钥: {0}'
-    client_register_failed: '注册客户端公钥失败: {0}'
-    client_not_found: '未找到客户端公钥: {0}'
-    token_not_found: '未找到共享令牌: {0}'
-    client_removed: '已移除客户端: {0}'
   throttling:
     permanent_block: IP {0} 已永久封禁：超过每秒最大请求值
     temp_block: IP {0} 已临时封禁：超过每秒告警请求值

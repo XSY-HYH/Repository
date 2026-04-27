@@ -217,12 +217,6 @@ namespace Repository.Services
             if (isZh) lines.Add("# 隐藏的路径");
             else lines.Add("# Hidden paths");
             lines.Add($"HiddenPaths: \"{EscapeYamlString(config.HiddenPaths)}\"");
-            if (isZh) lines.Add("# 启用路径保护");
-            else lines.Add("# Enable path protection");
-            lines.Add($"ProtectEnabled: {config.ProtectEnabled.ToString().ToLower()}");
-            if (isZh) lines.Add("# 受保护的路径");
-            else lines.Add("# Protected paths");
-            lines.Add($"ProtectPaths: \"{EscapeYamlString(config.ProtectPaths)}\"");
             if (isZh) lines.Add("# 启用 PROXY Protocol 支持");
             else lines.Add("# Enable PROXY Protocol support");
             lines.Add($"ProxyProtocolEnabled: {config.ProxyProtocolEnabled.ToString().ToLower()}");

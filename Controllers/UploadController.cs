@@ -10,15 +10,13 @@ namespace Repository.Controllers
         private readonly ConfigManager _configManager;
         private readonly Logger _logger;
         private readonly BlacklistService _blacklistService;
-        private readonly ProtectionService _protectionService;
         private readonly ClientIPService _clientIPService;
 
-        public UploadController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService, ClientIPService clientIPService)
+        public UploadController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
-            _protectionService = protectionService;
             _clientIPService = clientIPService;
         }
 
@@ -85,19 +83,13 @@ namespace Repository.Controllers
                     return BadRequest(I18nService.Instance.T("upload.path_invalid"));
                 }
                 
-                if (ProtectionService.IsSystemPath(folderPath))
+                if (PathSecurity.IsSystemPath(folderPath))
                 {
                     _logger.LogWarning(I18nService.Instance.T("upload.system_path", clientIP, folderPath));
                     return NotFound(I18nService.Instance.T("upload.folder_not_found"));
                 }
                 
                 var relPath = GetRelativePath(repoPath, targetFolder);
-                
-                if (_protectionService.IsPathProtected(relPath) && !_protectionService.VerifyToken(relPath, token))
-                {
-                    _logger.LogWarning(I18nService.Instance.T("upload.protected_dir", clientIP, relPath));
-                    return NotFound(I18nService.Instance.T("upload.folder_not_found"));
-                }
                 
                 if (!Directory.Exists(targetFolder))
                 {

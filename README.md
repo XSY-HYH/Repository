@@ -21,21 +21,6 @@ I just wanted to prove it could be done—but it's definitely not something you'
 - **Request Throttling**: Limit request frequency per IP to prevent malicious attacks
 - **Path Security**: Prevent directory traversal attacks, ensure access scope is limited
 
-### Directory Protection
-Two protection modes are supported:
-
-#### Token Mode (Simple Mode)
-- Access token passed via URL parameter
-- Suitable for general scenarios, simple client implementation
-- SHA256 hash verification support
-
-#### Secure Mode (I think it's the worst and most useless design. You'd better not turn on that option, because you might never need it.)
-- RSA + AES hybrid encryption
-- Mutual authentication
-- Anti-replay attack (Nonce + Timestamp)
-- Forward security (new key generated per session)
-- Suitable for enterprise-level security requirements
-
 ### HTTPS Support
 - Support HTTP and HTTPS running simultaneously
 - Support HTTP to HTTPS automatic redirect
@@ -67,17 +52,12 @@ Repository/
 │   ├── AdminController.cs         # Admin panel controller
 │   ├── DirectoryController.cs     # Directory API
 │   ├── FileController.cs          # File operation API
-│   ├── UploadController.cs        # Upload API
-│   ├── KeyManagementController.cs # Key management API
-│   └── SecureServerHandler.cs     # Secure verification handler
+│   └── UploadController.cs        # Upload API
 ├── Services/              # Service Layer
 │   ├── ConfigManager.cs           # Configuration management
-│   ├── ProtectionService.cs       # Directory protection service
 │   ├── BlacklistService.cs        # Blacklist service
 │   ├── RequestThrottlingService.cs   # Request throttling service
 │   ├── ProxyProtocolService.cs    # PROXY Protocol parsing service
-│   ├── KeyManagementService.cs    # Key management service
-│   ├── SecureSessionService.cs    # Secure session service
 │   ├── ChapAuthService.cs         # CHAP authentication service
 │   ├── AdminConnectionManager.cs  # Admin connection manager
 │   ├── Logger.cs                  # Logging service
@@ -110,14 +90,6 @@ Repository/
 | `/api/download/{path}` | GET | Download file |
 | `/api/preview/{path}` | GET | Preview file |
 | `/api/upload/{path}` | POST | Upload file |
-
-### Key Management (Secure Mode)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/keys/server` | GET | Get server public key |
-| `/api/keys/register` | POST | Register client public key |
-| `/api/keys/verify` | POST | Verify encrypted request |
-| `/api/keys/client/{id}` | DELETE | Remove client registration |
 
 ### Admin Panel
 | Endpoint | Method | Description |
@@ -220,41 +192,7 @@ $RECYCLE.BIN|System Volume Information|*.log|%/node_modules|temp/*
 | AutoRestart | bool | false | Enable auto-restart on crash |
 | MaxRestartAttempts | int | 3 | Maximum restart attempts |
 
-## Directory Protection Configuration
-
-Create a `Protectionlock.json` file in the directory to protect:
-
-### Token Mode
-```json
-{
-  "auth_method": "token",
-  "token": "your_password_here"
-}
-```
-
-Access method: `/api/files?path=protected_dir&token=sha256_hash`
-
-### Secure Mode
-```json
-{
-  "auth_method": "secure",
-  "client_id": "unique_client_id",
-  "shared_token": "shared_secret_token"
-}
-```
-
-Requires a professional client supporting RSA/AES/HMAC to complete the verification process.
-
 ## Security Features
-
-### Protected Directory Hiding
-- Protected directories are not shown in directory listings
-- Direct access to protected directories returns 404, not exposing directory existence
-- `.keys` directory is automatically hidden to prevent key leakage
-
-### Anti-Replay Attack
-- Nonce caching mechanism to prevent request replay
-- Timestamp validation, limiting request validity (±60 seconds)
 
 ### Path Security
 - Prevent directory traversal attacks (`../` etc.)
@@ -278,7 +216,5 @@ Requires a professional client supporting RSA/AES/HMAC to complete the verificat
 
 1. Some configurations require service restart after modification
 2. Ensure read/write permissions for repository directory
-3. Secure mode requires professional client support
-4. HTTPS supports auto-generated self-signed certificates (CRT/KEY format)
-5. Upload feature is disabled by default, pay attention to security when enabled
-6. Disabling ProtectEnabled can speed up startup, but protected directories will be accessible without verification
+3. HTTPS supports auto-generated self-signed certificates (CRT/KEY format)
+4. Upload feature is disabled by default, pay attention to security when enabled

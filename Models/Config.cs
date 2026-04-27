@@ -52,8 +52,6 @@ namespace Repository.Models
         public string ForbiddenDownloadPaths { get; set; } = "";
         public string ForbiddenPreviewPaths { get; set; } = "";
         public string HiddenPaths { get; set; } = "";
-        public bool ProtectEnabled { get; set; } = true;
-        public string ProtectPaths { get; set; } = "";
         
         // HTTPS配置
         public bool HttpsEnabled { get; set; } = false;

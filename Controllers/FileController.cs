@@ -11,16 +11,14 @@ namespace Repository.Controllers
         private readonly Logger _logger;
         private readonly BlacklistService _blacklistService;
         private readonly VideoStreamingService _videoStreamingService;
-        private readonly ProtectionService _protectionService;
         private readonly ClientIPService _clientIPService;
 
-        public FileController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, VideoStreamingService videoStreamingService, ProtectionService protectionService, ClientIPService clientIPService)
+        public FileController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, VideoStreamingService videoStreamingService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
             _videoStreamingService = videoStreamingService;
-            _protectionService = protectionService;
             _clientIPService = clientIPService;
         }
 
@@ -58,13 +56,7 @@ namespace Repository.Controllers
                     return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
                 
-                if (Path.GetFileName(filePath).Equals("Protectionlock.json", StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning(I18nService.Instance.T("file_preview.protection_lock", clientIP, filePath));
-                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
-                }
-                
-                if (ProtectionService.IsSystemPath(filePath))
+                if (PathSecurity.IsSystemPath(filePath))
                 {
                     _logger.LogWarning(I18nService.Instance.T("file_preview.system_path", clientIP, filePath));
                     return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
@@ -88,12 +80,6 @@ namespace Repository.Controllers
                 }
 
                 var relPath = GetRelativePath(repoPath, fullPath);
-                
-                if (_protectionService.IsPathProtected(relPath) && !_protectionService.VerifyToken(relPath, token))
-                {
-                    _logger.LogWarning(I18nService.Instance.T("file_preview.protected_file", clientIP, relPath));
-                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
-                }
                 
                 if (IsPreviewForbidden(relPath))
                 {
@@ -258,13 +244,7 @@ namespace Repository.Controllers
                     return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
                 
-                if (Path.GetFileName(filePath).Equals("Protectionlock.json", StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning(I18nService.Instance.T("file_download.protection_lock", clientIP, filePath));
-                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
-                }
-                
-                if (ProtectionService.IsSystemPath(filePath))
+                if (PathSecurity.IsSystemPath(filePath))
                 {
                     _logger.LogWarning(I18nService.Instance.T("file_download.system_path", clientIP, filePath));
                     return NotFound(I18nService.Instance.T("file_download.file_not_found"));
@@ -281,12 +261,6 @@ namespace Repository.Controllers
                 }
 
                 var relPath = GetRelativePath(repoPath, fullPath);
-                
-                if (_protectionService.IsPathProtected(relPath) && !_protectionService.VerifyToken(relPath, token))
-                {
-                    _logger.LogWarning(I18nService.Instance.T("file_download.protected_file", clientIP, relPath));
-                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
-                }
                 
                 _logger.LogInfo(I18nService.Instance.T("file_download.processing", clientIP, filePath, relPath));
                 

@@ -175,14 +175,6 @@ HiddenPaths (string, default: "")
     Hidden paths (not shown in listings), separated by |.
     隐藏路径（不在列表中显示），用 | 分隔。
 
-ProtectEnabled (bool, default: true)
-    Enable directory protection feature. Disable for faster startup.
-    启用目录保护功能。禁用可加快启动速度。
-
-ProtectPaths (string, default: "")
-    Protected directory paths, separated by |.
-    受保护的目录路径，用 | 分隔。
-
 ================================================================================
                         HTTPS CONFIGURATION / HTTPS 配置
 ================================================================================
@@ -237,32 +229,6 @@ AutoRestart (bool, default: false)
     配置更改时自动重启服务器。
 
 ================================================================================
-                        DIRECTORY PROTECTION / 目录保护
-================================================================================
-
-Create Protectionlock.json in a directory to protect it:
-在目录中创建 Protectionlock.json 来保护该目录：
-
-Token Mode (Simple) / Token 模式（简单）:
-{
-    "auth_method": "token",
-    "token": "your_password"
-}
-
-Access: /api/files?path=protected_dir&token=sha256_hash
-访问方式：/api/files?path=protected_dir&token=sha256_hash
-
-Secure Mode (Advanced) / Secure 模式（高级）:
-{
-    "auth_method": "secure",
-    "client_id": "unique_client_id",
-    "shared_token": "shared_secret"
-}
-
-Requires RSA/AES/HMAC client. See docs/api/CHAT.MD for protocol details.
-需要支持 RSA/AES/HMAC 的客户端。协议详情见 docs/api/CHAT.MD。
-
-================================================================================
                         NOTES / 注意事项
 ================================================================================
 
@@ -273,7 +239,7 @@ Requires RSA/AES/HMAC client. See docs/api/CHAT.MD for protocol details.
    确保 RepositoryPath 有读写权限。
 
 3. Protected directories are hidden from listings by default.
-   受保护目录默认在列表中隐藏。
+   受保护目录默认在列表中隐藏。（已移除目录保护功能）
 
 4. .keys directory is always protected and hidden.
    .keys 目录始终受保护且隐藏。

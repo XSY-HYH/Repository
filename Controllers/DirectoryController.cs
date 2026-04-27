@@ -12,20 +12,18 @@ namespace Repository.Controllers
         private readonly ConfigManager _configManager;
         private readonly Logger _logger;
         private readonly BlacklistService _blacklistService;
-        private readonly ProtectionService _protectionService;
         private readonly ClientIPService _clientIPService;
 
-        public DirectoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService, ClientIPService clientIPService)
+        public DirectoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
-            _protectionService = protectionService;
             _clientIPService = clientIPService;
         }
 
         [HttpGet("api/files")]
-        public async Task<IActionResult> GetFiles([FromQuery(Name = "path")] string path = "", [FromQuery(Name = "token")] string? token = null, [FromQuery(Name = "session")] string? session = null)
+        public async Task<IActionResult> GetFiles([FromQuery(Name = "path")] string path = "", [FromQuery(Name = "token")] string? token = null)
         {
             var clientIP = _clientIPService.GetClientIP(HttpContext);
             
@@ -52,32 +50,10 @@ namespace Repository.Controllers
                     return BadRequest(I18nService.Instance.T("directory.path_invalid"));
                 }
 
-                if (ProtectionService.IsSystemPath(path))
+                if (PathSecurity.IsSystemPath(path))
                 {
                     _logger.LogWarning(I18nService.Instance.T("directory.system_path", clientIP, path));
                     return NotFound(I18nService.Instance.T("directory.directory_not_found"));
-                }
-
-                if (_protectionService.IsPathProtected(path))
-                {
-                    var authMethod = _protectionService.GetAuthMethod(path);
-                    
-                    if (authMethod == "secure")
-                    {
-                        if (!_protectionService.VerifySession(path, session))
-                        {
-                            _logger.LogWarning(I18nService.Instance.T("directory.secure_denied", clientIP, path));
-                            return NotFound(I18nService.Instance.T("directory.directory_not_found"));
-                        }
-                    }
-                    else
-                    {
-                        if (!_protectionService.VerifyToken(path, token))
-                        {
-                            _logger.LogWarning(I18nService.Instance.T("directory.token_denied", clientIP, path));
-                            return NotFound(I18nService.Instance.T("directory.directory_not_found"));
-                        }
-                    }
                 }
 
                 bool dirExists = await Task.Run(() => Directory.Exists(fullPath));
@@ -143,10 +119,6 @@ namespace Repository.Controllers
                     continue;
                 }
                 
-                if (_protectionService.IsPathProtected(relPath))
-                {
-                    continue;
-                }
                 
                 var dirUrl = GetRelativeUrl(relativePath, dirName, true);
                 var dirInfo = await Task.Run(() => new System.IO.DirectoryInfo(dir));
@@ -207,11 +179,6 @@ namespace Repository.Controllers
                     continue;
                 }
                 
-                if (fileName.Equals("Protectionlock.json", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-                
                 if (_blacklistService.IsPathBlacklisted(relPath))
                 {
                     continue;
@@ -222,10 +189,6 @@ namespace Repository.Controllers
                     continue;
                 }
                 
-                if (_protectionService.IsPathProtected(relPath))
-                {
-                    continue;
-                }
                 
                 var fileExtension = Path.GetExtension(file).ToLower();
                 var isPreviewable = allPreviewableExtensions.Contains(fileExtension);

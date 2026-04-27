@@ -86,10 +86,7 @@ namespace Repository
             builder.Services.AddSingleton<FileWatcherService>();
             builder.Services.AddSingleton<TemporaryLinkService>();
             builder.Services.AddSingleton<VideoStreamingService>();
-            builder.Services.AddSingleton<KeyManagementService>();
-            builder.Services.AddSingleton<SecureSessionService>();
             builder.Services.AddSingleton<NotificationService>();
-            builder.Services.AddSingleton<ProtectionService>();
             builder.Services.AddSingleton<ChapAuthService>();
             builder.Services.AddSingleton<AdminConnectionManager>();
 
@@ -347,10 +344,6 @@ namespace Repository
             var fileWatcher = app.Services.GetRequiredService<FileWatcherService>();
             fileWatcher.StartWatching(repoPath);
             logger.LogInfo(I18nService.Instance.T("watcher.started"));
-
-            var protectionService = app.Services.GetRequiredService<ProtectionService>();
-            protectionService.StartWatching(repoPath);
-            logger.LogInfo(I18nService.Instance.T("watcher.protection_started"));
 
             configManager.OnConfigChanged += (sender, newConfig) =>
             {

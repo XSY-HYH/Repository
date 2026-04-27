@@ -19,21 +19,6 @@
 - **请求限速**：限制单个 IP 的请求频率，防止恶意攻击
 - **路径安全**：防止目录遍历攻击，确保访问范围受限
 
-### 目录保护
-支持两种保护模式：
-
-#### Token 模式（简单模式）
-- 通过 URL 参数传递访问令牌
-- 适合一般场景，客户端实现简单
-- 支持 SHA256 哈希验证
-
-#### Secure 模式（我认为最糟糕且无用的设计，你最好别开那个选项，因为你可能永远用不上它）
-- RSA + AES 混合加密
-- 双向身份认证
-- 防重放攻击（Nonce + 时间戳）
-- 前向安全（每次会话生成新密钥）
-- 适合企业级安全需求
-
 ### HTTPS 支持
 - 支持 HTTP 和 HTTPS 同时运行
 - 支持 HTTP 到 HTTPS 自动重定向
@@ -65,17 +50,12 @@ Repository/
 │   ├── AdminController.cs         # 管理页面控制器
 │   ├── DirectoryController.cs     # 目录 API
 │   ├── FileController.cs          # 文件操作 API
-│   ├── UploadController.cs        # 上传 API
-│   ├── KeyManagementController.cs # 密钥管理 API
-│   └── SecureServerHandler.cs     # Secure 验证处理
+│   └── UploadController.cs        # 上传 API
 ├── Services/              # 服务层
 │   ├── ConfigManager.cs           # 配置管理
-│   ├── ProtectionService.cs       # 目录保护服务
 │   ├── BlacklistService.cs        # 黑名单服务
 │   ├── RequestThrottlingService.cs   # 请求限速服务
 │   ├── ProxyProtocolService.cs    # PROXY Protocol 解析服务
-│   ├── KeyManagementService.cs    # 密钥管理服务
-│   ├── SecureSessionService.cs    # 安全会话服务
 │   ├── ChapAuthService.cs         # CHAP 认证服务
 │   ├── AdminConnectionManager.cs  # 管理员连接管理
 │   ├── Logger.cs                  # 日志服务
@@ -108,14 +88,6 @@ Repository/
 | `/api/download/{path}` | GET | 下载文件 |
 | `/api/preview/{path}` | GET | 预览文件 |
 | `/api/upload/{path}` | POST | 上传文件 |
-
-### 密钥管理（Secure 模式）
-| 接口 | 方法 | 说明 |
-|------|------|------|
-| `/api/keys/server` | GET | 获取服务器公钥 |
-| `/api/keys/register` | POST | 注册客户端公钥 |
-| `/api/keys/verify` | POST | 验证加密请求 |
-| `/api/keys/client/{id}` | DELETE | 移除客户端注册 |
 
 ### 管理页面
 | 接口 | 方法 | 说明 |
@@ -217,41 +189,7 @@ $RECYCLE.BIN|System Volume Information|*.log|%/node_modules|temp/*
 | AutoRestart | bool | false | 启用崩溃后自动重启 |
 | MaxRestartAttempts | int | 3 | 最大重启尝试次数 |
 
-## 目录保护配置
-
-在需要保护的目录下创建 `Protectionlock.json` 文件：
-
-### Token 模式
-```json
-{
-  "auth_method": "token",
-  "token": "your_password_here"
-}
-```
-
-访问方式：`/api/files?path=protected_dir&token=sha256_hash`
-
-### Secure 模式
-```json
-{
-  "auth_method": "secure",
-  "client_id": "unique_client_id",
-  "shared_token": "shared_secret_token"
-}
-```
-
-需要使用支持 RSA/AES/HMAC 的专业客户端完成验证流程。
-
 ## 安全特性
-
-### 受保护目录隐藏
-- 受保护目录在目录列表中不显示
-- 直接访问受保护目录返回 404，不暴露目录存在信息
-- `.keys` 目录自动隐藏，防止密钥泄露
-
-### 防重放攻击
-- Nonce 缓存机制，防止请求重放
-- 时间戳验证，限制请求有效期（±60秒）
 
 ### 路径安全
 - 防止目录遍历攻击（`../` 等）
@@ -275,7 +213,5 @@ $RECYCLE.BIN|System Volume Information|*.log|%/node_modules|temp/*
 
 1. 修改配置文件后部分配置需要重启服务
 2. 确保仓库目录有读写权限
-3. Secure 模式需要专业客户端支持
-4. HTTPS 支持自动生成自签名证书（CRT/KEY 格式）
-5. 上传功能默认禁用，启用后注意安全性
-6. ProtectEnabled 禁用后可加快启动速度，但受保护目录将无需验证即可访问
+3. HTTPS 支持自动生成自签名证书（CRT/KEY 格式）
+4. 上传功能默认禁用，启用后注意安全性

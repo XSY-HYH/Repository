@@ -13,15 +13,13 @@ namespace Repository.Controllers
         private readonly ConfigManager _configManager;
         private readonly Logger _logger;
         private readonly BlacklistService _blacklistService;
-        private readonly ProtectionService _protectionService;
         private readonly ClientIPService _clientIPService;
 
-        public RepositoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService, ClientIPService clientIPService)
+        public RepositoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
-            _protectionService = protectionService;
             _clientIPService = clientIPService;
         }
 
@@ -67,16 +65,9 @@ namespace Repository.Controllers
                 }
                 
                 // 检查是否为系统路径
-                if (ProtectionService.IsSystemPath(path))
+                if (PathSecurity.IsSystemPath(path))
                 {
                     _logger.LogWarning(I18nService.Instance.T("repository.system_path_log", clientIP, path));
-                    return NotFound(I18nService.Instance.T("repository.directory_not_exist"));
-                }
-                
-                // 检查路径是否受保护
-                if (_protectionService.IsPathProtected(path))
-                {
-                    _logger.LogWarning(I18nService.Instance.T("repository.protected_denied_log", clientIP, path));
                     return NotFound(I18nService.Instance.T("repository.directory_not_exist"));
                 }
             }

@@ -14,16 +14,14 @@ namespace Repository.Controllers
         private readonly Logger _logger;
         private readonly ChapAuthService _chapAuthService;
         private readonly BlacklistService _blacklistService;
-        private readonly ProtectionService _protectionService;
         private readonly AdminConnectionManager _connectionManager;
 
-        public AdminController(ConfigManager configManager, Logger logger, ChapAuthService chapAuthService, BlacklistService blacklistService, ProtectionService protectionService, AdminConnectionManager connectionManager)
+        public AdminController(ConfigManager configManager, Logger logger, ChapAuthService chapAuthService, BlacklistService blacklistService, AdminConnectionManager connectionManager)
         {
             _configManager = configManager;
             _logger = logger;
             _chapAuthService = chapAuthService;
             _blacklistService = blacklistService;
-            _protectionService = protectionService;
             _connectionManager = connectionManager;
         }
 
