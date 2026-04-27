@@ -14,13 +14,15 @@ namespace Repository.Controllers
         private readonly Logger _logger;
         private readonly BlacklistService _blacklistService;
         private readonly ProtectionService _protectionService;
+        private readonly ClientIPService _clientIPService;
 
-        public RepositoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService)
+        public RepositoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
             _protectionService = protectionService;
+            _clientIPService = clientIPService;
         }
 
         /// <summary>
@@ -29,14 +31,13 @@ namespace Repository.Controllers
         [HttpGet]
         public IActionResult Index([FromQuery(Name = "path")] string path = "")
         {
-            // 获取客户端IP地址
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
             // 添加分隔线，开始新的请求
             _logger.LogSeparator();
             
             // 记录请求开始
-            _logger.LogInfo($"开始处理目录浏览请求，客户端IP: {clientIP}，路径: {path}");
+            _logger.LogInfo(I18nService.Instance.T("repository.processing_request", clientIP, path));
             
             try
             {
@@ -46,43 +47,43 @@ namespace Repository.Controllers
                 // 先做路径安全检查
                 if (!IsPathValid(repoPath, fullPath))
                 {
-                    _logger.LogWarning($"有人想搞事情！尝试访问仓库外的路径: {path}");
-                    return NotFound("路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("repository.outside_repo_log", clientIP, path));
+                    return NotFound(I18nService.Instance.T("repository.path_invalid"));
                 }
                 
                 // 检查目录是否存在
                 if (!Directory.Exists(fullPath))
                 {
-                    _logger.LogWarning($"目录不存在: {fullPath}");
-                    return NotFound("目录不存在");
+                    _logger.LogWarning(I18nService.Instance.T("repository.directory_not_exist_log", fullPath));
+                    return NotFound(I18nService.Instance.T("repository.directory_not_exist"));
                 }
                 
                 // 检查路径是否在黑名单中
                 var relPath = GetRelativePath(repoPath, fullPath);
                 if (_blacklistService.IsPathBlacklisted(relPath))
                 {
-                    _logger.LogWarning($"目录浏览被黑名单阻止: {relPath}");
-                    return NotFound("目录不存在"); // 为了安全，不暴露黑名单信息
+                    _logger.LogWarning(I18nService.Instance.T("repository.blacklist_blocked", relPath));
+                    return NotFound(I18nService.Instance.T("repository.directory_not_exist")); // 为了安全，不暴露黑名单信息
                 }
                 
                 // 检查是否为系统路径
                 if (ProtectionService.IsSystemPath(path))
                 {
-                    _logger.LogWarning($"尝试访问系统路径，客户端IP: {clientIP}，路径: {path}");
-                    return NotFound("目录不存在");
+                    _logger.LogWarning(I18nService.Instance.T("repository.system_path_log", clientIP, path));
+                    return NotFound(I18nService.Instance.T("repository.directory_not_exist"));
                 }
                 
                 // 检查路径是否受保护
                 if (_protectionService.IsPathProtected(path))
                 {
-                    _logger.LogWarning($"受保护目录访问被拒绝，客户端IP: {clientIP}，路径: {path}");
-                    return NotFound("目录不存在");
+                    _logger.LogWarning(I18nService.Instance.T("repository.protected_denied_log", clientIP, path));
+                    return NotFound(I18nService.Instance.T("repository.directory_not_exist"));
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"处理根路径请求时出错: {path}");
-                return StatusCode(500, "服务器内部错误");
+                _logger.LogError(ex, I18nService.Instance.T("repository.error_processing", path));
+                return StatusCode(500, I18nService.Instance.T("repository.server_error"));
             }
             
             var config = _configManager.GetConfig();
@@ -115,51 +116,15 @@ namespace Repository.Controllers
             html = html.Replace("/* CSS will be injected here */", css);
             html = html.Replace("/* JavaScript will be injected here */", js);
               
-             _logger.LogInfo($"HTML content generated successfully, length: {html.Length}, Path: {displayPath}");
-             _logger.LogInfo($"CSS length: {css.Length}, JS length: {js.Length}");
+             _logger.LogInfo(I18nService.Instance.T("repository.html_generated", html.Length, displayPath));
+             _logger.LogInfo(I18nService.Instance.T("repository.css_js_length", css.Length, js.Length));
              
-             // 记录成功处理
-             _logger.LogInfo($"目录浏览请求处理成功，客户端IP: {clientIP}，路径: {path}");
+             _logger.LogInfo(I18nService.Instance.T("repository.success", clientIP, path));
              
              // 请求处理完成，添加分隔线
              _logger.LogSeparator();
              
              return Content(html, "text/html");
-        }
-
-        /// <summary>
-        /// 获取客户端IP地址
-        /// </summary>
-        private string GetClientIP()
-        {
-            try
-            {
-                var httpContext = HttpContext;
-                
-                // 首先检查X-Forwarded-For头部（代理服务器）
-                var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(forwardedFor))
-                {
-                    // X-Forwarded-For可能包含多个IP，取第一个
-                    var ips = forwardedFor.Split(',').Select(ip => ip.Trim());
-                    return ips.FirstOrDefault() ?? "Unknown";
-                }
-                
-                // 检查X-Real-IP头部
-                var realIP = httpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(realIP))
-                {
-                    return realIP;
-                }
-                
-                // 最后使用RemoteIpAddress
-                return httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取客户端IP地址时发生错误");
-                return "Unknown";
-            }
         }
 
         /// <summary>

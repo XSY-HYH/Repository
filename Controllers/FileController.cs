@@ -12,22 +12,24 @@ namespace Repository.Controllers
         private readonly BlacklistService _blacklistService;
         private readonly VideoStreamingService _videoStreamingService;
         private readonly ProtectionService _protectionService;
+        private readonly ClientIPService _clientIPService;
 
-        public FileController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, VideoStreamingService videoStreamingService, ProtectionService protectionService)
+        public FileController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, VideoStreamingService videoStreamingService, ProtectionService protectionService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
             _videoStreamingService = videoStreamingService;
             _protectionService = protectionService;
+            _clientIPService = clientIPService;
         }
 
         [HttpGet("api/preview/{**filePath}")]
         public async Task<IActionResult> PreviewFile(string filePath, [FromQuery(Name = "token")] string? token = null)
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
-            _logger.LogInfo($"开始处理文件预览请求，客户端IP: {clientIP}，文件路径: {filePath}");
+            _logger.LogInfo(I18nService.Instance.T("file_preview.request", clientIP, filePath));
             
             try
             {
@@ -36,44 +38,44 @@ namespace Repository.Controllers
                     try
                     {
                         filePath = Uri.UnescapeDataString(filePath);
-                        _logger.LogInfo($"URL解码后文件路径: {filePath}");
+                        _logger.LogInfo(I18nService.Instance.T("file_preview.url_decode_success", filePath));
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning($"URL解码失败，使用原始路径: {filePath}，错误: {ex.Message}");
+                        _logger.LogWarning(I18nService.Instance.T("file_preview.url_decode_failed", filePath, ex.Message));
                     }
                 }
                 
                 if (!string.IsNullOrEmpty(filePath) && ContainsIllegalCharacters(filePath))
                 {
-                    _logger.LogWarning($"检测到非法字符的文件预览请求，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return BadRequest("文件路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.illegal_chars", clientIP, filePath));
+                    return BadRequest(I18nService.Instance.T("file_preview.path_invalid"));
                 }
                 
                 if (Path.GetFileName(filePath).Equals("data.ini", StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogWarning($"尝试预览权限配置文件，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.permission_config", clientIP, filePath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
                 
                 if (Path.GetFileName(filePath).Equals("Protectionlock.json", StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogWarning($"尝试预览保护锁文件，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.protection_lock", clientIP, filePath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
                 
                 if (ProtectionService.IsSystemPath(filePath))
                 {
-                    _logger.LogWarning($"尝试预览系统路径文件，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.system_path", clientIP, filePath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
                 
                 var config = _configManager.GetConfig();
                 
                 if (!config.PreviewEnabled)
                 {
-                    _logger.LogWarning($"文件预览功能已禁用，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return StatusCode(403, "预览功能已禁用");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.feature_disabled", clientIP, filePath));
+                    return StatusCode(403, I18nService.Instance.T("file_preview.preview_disabled_response"));
                 }
                 
                 var repoPath = config.RepositoryPath;
@@ -81,41 +83,41 @@ namespace Repository.Controllers
 
                 if (!IsPathValid(repoPath, fullPath))
                 {
-                    _logger.LogWarning($"安全警告！客户端IP: {clientIP}，尝试预览仓库外的文件: {filePath}");
-                    return BadRequest("文件路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.outside_repo", clientIP, filePath));
+                    return BadRequest(I18nService.Instance.T("file_preview.path_invalid"));
                 }
 
                 var relPath = GetRelativePath(repoPath, fullPath);
                 
                 if (_protectionService.IsPathProtected(relPath) && !_protectionService.VerifyToken(relPath, token))
                 {
-                    _logger.LogWarning($"受保护文件预览被拒绝，客户端IP: {clientIP}，文件路径: {relPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.protected_file", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
                 
                 if (IsPreviewForbidden(relPath))
                 {
-                    _logger.LogWarning($"文件预览被禁止预览列表阻止，客户端IP: {clientIP}，文件路径: {relPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.forbidden_preview", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
                 
                 if (IsDownloadForbidden(relPath))
                 {
-                    _logger.LogWarning($"文件预览被禁止下载列表阻止，客户端IP: {clientIP}，文件路径: {relPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.forbidden_download", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
                 
                 if (_blacklistService.IsPathBlacklisted(relPath))
                 {
-                    _logger.LogWarning($"文件预览被黑名单阻止，客户端IP: {clientIP}，文件路径: {relPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.blacklist_blocked", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
 
                 bool fileExists = await Task.Run(() => System.IO.File.Exists(fullPath));
                 if (!fileExists)
                 {
-                    _logger.LogWarning($"文件不存在，客户端IP: {clientIP}，文件路径: {fullPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.file_not_exist", clientIP, fullPath));
+                    return NotFound(I18nService.Instance.T("file_preview.file_not_found"));
                 }
 
                 var fileExtension = Path.GetExtension(fullPath).ToLowerInvariant();
@@ -139,27 +141,27 @@ namespace Repository.Controllers
                 var fileInfo = await Task.Run(() => new System.IO.FileInfo(fullPath));
                 if (!isVideo && fileInfo.Length > 10 * 1024 * 1024)
                 {
-                    _logger.LogWarning($"文件过大，拒绝预览，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(fileInfo.Length)})");
-                    return StatusCode(413, "文件过大");
+                    _logger.LogWarning(I18nService.Instance.T("file_preview.file_too_large", clientIP, filePath, FormatFileSize(fileInfo.Length)));
+                    return StatusCode(413, I18nService.Instance.T("file_preview.file_too_large_response"));
                 }
                 
                 if (imageExtensions.Contains(fileExtension))
                 {
-                    _logger.LogInfo($"图片预览成功，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(fileInfo.Length)})");
+                    _logger.LogInfo(I18nService.Instance.T("file_preview.image_success", clientIP, filePath, FormatFileSize(fileInfo.Length)));
                     var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
                     return File(bytes, GetImageContentType(fileExtension));
                 }
                 
                 if (audioExtensions.Contains(fileExtension))
                 {
-                    _logger.LogInfo($"音频预览成功，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(fileInfo.Length)})");
+                    _logger.LogInfo(I18nService.Instance.T("file_preview.audio_success", clientIP, filePath, FormatFileSize(fileInfo.Length)));
                     var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
                     return File(bytes, GetAudioContentType(fileExtension));
                 }
                 
                 if (isVideo)
                 {
-                    _logger.LogInfo($"视频预览成功，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(fileInfo.Length)})");
+                    _logger.LogInfo(I18nService.Instance.T("file_preview.video_success", clientIP, filePath, FormatFileSize(fileInfo.Length)));
                     
                     var contentType = GetVideoContentType(fileExtension);
                     
@@ -193,41 +195,41 @@ namespace Repository.Controllers
                 if (textExtensions.Contains(fileExtension))
                 {
                     var fileContent = await System.IO.File.ReadAllTextAsync(fullPath);
-                    _logger.LogInfo($"文本预览成功，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(fileInfo.Length)})");
+                    _logger.LogInfo(I18nService.Instance.T("file_preview.text_success", clientIP, filePath, FormatFileSize(fileInfo.Length)));
                     return Ok(new { name = fileName, content = fileContent });
                 }
                 
-                _logger.LogWarning($"文件类型不支持预览，客户端IP: {clientIP}，文件路径: {filePath}");
-                return StatusCode(415, "不支持的文件类型");
+                _logger.LogWarning(I18nService.Instance.T("file_preview.unsupported_type", clientIP, filePath));
+                return StatusCode(415, I18nService.Instance.T("file_preview.unsupported_type_response"));
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogError(ex, $"权限不足，无法预览文件: {filePath}");
-                return StatusCode(403, "没有访问权限");
+                _logger.LogError(ex, I18nService.Instance.T("file_preview.error_unauthorized", filePath));
+                return StatusCode(403, I18nService.Instance.T("file_preview.access_denied"));
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, $"文件读取错误: {filePath}");
-                return StatusCode(500, "文件读取失败");
+                _logger.LogError(ex, I18nService.Instance.T("file_preview.error_io", filePath));
+                return StatusCode(500, I18nService.Instance.T("file_preview.file_read_error"));
             }
             catch (OutOfMemoryException ex)
             {
-                _logger.LogError(ex, $"内存不足，无法处理大文件: {filePath}");
-                return StatusCode(500, "服务器内存不足");
+                _logger.LogError(ex, I18nService.Instance.T("file_preview.error_memory", filePath));
+                return StatusCode(500, I18nService.Instance.T("file_preview.insufficient_memory"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"预览文件时发生未知错误: {filePath}");
-                return StatusCode(500, "服务器内部错误");
+                _logger.LogError(ex, I18nService.Instance.T("file_preview.error_unknown", filePath));
+                return StatusCode(500, I18nService.Instance.T("file_preview.server_error"));
             }
         }
 
         [HttpGet("api/download/{**filePath}")]
         public async Task<IActionResult> DownloadFile(string filePath, [FromQuery(Name = "token")] string? token = null)
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
-            _logger.LogInfo($"开始处理文件下载请求，客户端IP: {clientIP}，文件路径: {filePath}");
+            _logger.LogInfo(I18nService.Instance.T("file_download.request", clientIP, filePath));
             
             try
             {
@@ -236,36 +238,36 @@ namespace Repository.Controllers
                     try
                     {
                         filePath = Uri.UnescapeDataString(filePath);
-                        _logger.LogInfo($"URL解码后文件路径: {filePath}");
+                        _logger.LogInfo(I18nService.Instance.T("file_download.url_decode_success", filePath));
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning($"URL解码失败，使用原始路径: {filePath}，错误: {ex.Message}");
+                        _logger.LogWarning(I18nService.Instance.T("file_download.url_decode_failed", filePath, ex.Message));
                     }
                 }
                 
                 if (!string.IsNullOrEmpty(filePath) && ContainsIllegalCharacters(filePath))
                 {
-                    _logger.LogWarning($"检测到非法字符的文件下载请求，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return BadRequest("文件路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.illegal_chars", clientIP, filePath));
+                    return BadRequest(I18nService.Instance.T("file_download.path_invalid"));
                 }
                 
                 if (Path.GetFileName(filePath).Equals("data.ini", StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogWarning($"尝试下载权限配置文件，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.permission_config", clientIP, filePath));
+                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
                 
                 if (Path.GetFileName(filePath).Equals("Protectionlock.json", StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogWarning($"尝试下载保护锁文件，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.protection_lock", clientIP, filePath));
+                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
                 
                 if (ProtectionService.IsSystemPath(filePath))
                 {
-                    _logger.LogWarning($"尝试下载系统路径文件，客户端IP: {clientIP}，文件路径: {filePath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.system_path", clientIP, filePath));
+                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
                 
                 var config = _configManager.GetConfig();
@@ -274,55 +276,55 @@ namespace Repository.Controllers
 
                 if (!IsPathValid(repoPath, fullPath))
                 {
-                    _logger.LogWarning($"安全警告！客户端IP: {clientIP}，尝试下载仓库外的文件: {filePath}");
-                    return BadRequest("文件路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.outside_repo", clientIP, filePath));
+                    return BadRequest(I18nService.Instance.T("file_download.path_invalid"));
                 }
 
                 var relPath = GetRelativePath(repoPath, fullPath);
                 
                 if (_protectionService.IsPathProtected(relPath) && !_protectionService.VerifyToken(relPath, token))
                 {
-                    _logger.LogWarning($"受保护文件下载被拒绝，客户端IP: {clientIP}，文件路径: {relPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.protected_file", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
                 
-                _logger.LogInfo($"下载请求处理中，客户端IP: {clientIP}，请求文件: {filePath}，相对路径: {relPath}");
+                _logger.LogInfo(I18nService.Instance.T("file_download.processing", clientIP, filePath, relPath));
                 
                 var forbiddenPaths = config.ForbiddenDownloadPaths?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
-                _logger.LogInfo($"当前禁止下载路径配置: {config.ForbiddenDownloadPaths ?? "空"}");
+                _logger.LogInfo(I18nService.Instance.T("file_download.forbidden_config", config.ForbiddenDownloadPaths ?? I18nService.Instance.T("file_download.not_configured")));
                 
                 if (IsDownloadForbidden(relPath))
                 {
-                    _logger.LogWarning($"文件下载被禁止下载列表阻止，客户端IP: {clientIP}，文件路径: {relPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.forbidden_list", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
                 
-                _logger.LogInfo($"文件不在禁止下载列表中，继续处理下载请求，客户端IP: {clientIP}，文件路径: {relPath}");
+                _logger.LogInfo(I18nService.Instance.T("file_download.not_in_forbidden", clientIP, relPath));
                 if (_blacklistService.IsPathBlacklisted(relPath))
                 {
-                    _logger.LogWarning($"文件下载被黑名单阻止，客户端IP: {clientIP}，文件路径: {relPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.blacklist_blocked", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
 
                 bool fileExists = await Task.Run(() => System.IO.File.Exists(fullPath));
                 if (!fileExists)
                 {
-                    _logger.LogWarning($"文件不存在，客户端IP: {clientIP}，文件路径: {fullPath}");
-                    return NotFound("文件不存在");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.file_not_exist", clientIP, fullPath));
+                    return NotFound(I18nService.Instance.T("file_download.file_not_found"));
                 }
 
                 var fileInfo = await Task.Run(() => new System.IO.FileInfo(fullPath));
                 var maxDownloadSizeBytes = config.MaxDownloadSizeMB * 1024 * 1024;
                 if (fileInfo.Length > maxDownloadSizeBytes)
                 {
-                    _logger.LogWarning($"文件过大，拒绝下载，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(fileInfo.Length)})，限制大小: {FormatFileSize(maxDownloadSizeBytes)}");
-                    return StatusCode(413, $"文件过大（超过{config.MaxDownloadSizeMB}MB）");
+                    _logger.LogWarning(I18nService.Instance.T("file_download.file_too_large", clientIP, filePath, FormatFileSize(fileInfo.Length), FormatFileSize(maxDownloadSizeBytes)));
+                    return StatusCode(413, I18nService.Instance.T("file_download.file_too_large_response", config.MaxDownloadSizeMB));
                 }
 
                 var fileExtension = Path.GetExtension(fullPath).ToLowerInvariant();
                 var fileName = Path.GetFileName(fullPath);
                 
-                _logger.LogInfo($"文件下载成功，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(fileInfo.Length)})");
+                _logger.LogInfo(I18nService.Instance.T("file_download.success", clientIP, filePath, FormatFileSize(fileInfo.Length)));
                 
                 Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
                 Response.Headers["Pragma"] = "no-cache";
@@ -333,23 +335,23 @@ namespace Repository.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogError(ex, $"权限不足，无法下载文件: {filePath}");
-                return StatusCode(403, "没有访问权限");
+                _logger.LogError(ex, I18nService.Instance.T("file_download.error_unauthorized", filePath));
+                return StatusCode(403, I18nService.Instance.T("file_download.access_denied"));
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, $"文件读取错误: {filePath}");
-                return StatusCode(500, "文件读取失败");
+                _logger.LogError(ex, I18nService.Instance.T("file_download.error_io", filePath));
+                return StatusCode(500, I18nService.Instance.T("file_download.file_read_error"));
             }
             catch (OutOfMemoryException ex)
             {
-                _logger.LogError(ex, $"内存不足，无法处理大文件: {filePath}");
-                return StatusCode(500, "服务器内存不足");
+                _logger.LogError(ex, I18nService.Instance.T("file_download.error_memory", filePath));
+                return StatusCode(500, I18nService.Instance.T("file_download.insufficient_memory"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"下载文件时发生未知错误: {filePath}");
-                return StatusCode(500, "服务器内部错误");
+                _logger.LogError(ex, I18nService.Instance.T("file_download.error_unknown", filePath));
+                return StatusCode(500, I18nService.Instance.T("file_download.server_error"));
             }
         }
 
@@ -444,32 +446,6 @@ namespace Repository.Controllers
                 ".ogv" => "video/ogg",
                 _ => "application/octet-stream"
             };
-        }
-
-        private string GetClientIP()
-        {
-            try
-            {
-                var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(forwardedFor))
-                {
-                    var ips = forwardedFor.Split(',').Select(ip => ip.Trim());
-                    return ips.FirstOrDefault() ?? "Unknown";
-                }
-                
-                var realIP = HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(realIP))
-                {
-                    return realIP;
-                }
-                
-                return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取客户端IP地址时发生错误");
-                return "Unknown";
-            }
         }
 
         private string BuildFullPath(string repoPath, string path)

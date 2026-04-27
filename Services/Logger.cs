@@ -13,6 +13,12 @@ namespace Repository.Services
         private int _sessionAccessCount = 0;
         private NotificationService? _notificationService;
         private ConfigManager? _configManager;
+        private bool _debugMode = false;
+
+        public void SetDebugMode(bool enabled)
+        {
+            _debugMode = enabled;
+        }
 
         public Logger()
         {
@@ -45,6 +51,23 @@ namespace Repository.Services
         public void SetConfigManager(ConfigManager configManager)
         {
             _configManager = configManager;
+        }
+
+        public void LogDebug(string message)
+        {
+            if (!_debugMode)
+                return;
+
+            var time = DateTime.Now.ToString("HH:mm:ss");
+            var logEntry = $"[{time}][DEBUG]{message}";
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine(logEntry);
+            Console.ResetColor();
+            
+            lock (_lockObject)
+            {
+                _logQueue.Enqueue(logEntry);
+            }
         }
 
         public void LogInfo(string message)

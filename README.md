@@ -18,7 +18,7 @@ I just wanted to prove it could be done—but it's definitely not something you'
 ### Security Protection
 - **IP Filtering**: Whitelist mode, only allow specified IPs to access
 - **Blacklist Mechanism**: Path blacklist to block access to sensitive directories
-- **DDoS Protection**: Limit request frequency per IP to prevent malicious attacks(Not very useful.)
+- **Request Throttling**: Limit request frequency per IP to prevent malicious attacks
 - **Path Security**: Prevent directory traversal attacks, ensure access scope is limited
 
 ### Directory Protection
@@ -74,7 +74,8 @@ Repository/
 │   ├── ConfigManager.cs           # Configuration management
 │   ├── ProtectionService.cs       # Directory protection service
 │   ├── BlacklistService.cs        # Blacklist service
-│   ├── DDoSProtectionService.cs   # DDoS protection service
+│   ├── RequestThrottlingService.cs   # Request throttling service
+│   ├── ProxyProtocolService.cs    # PROXY Protocol parsing service
 │   ├── KeyManagementService.cs    # Key management service
 │   ├── SecureSessionService.cs    # Secure session service
 │   ├── ChapAuthService.cs         # CHAP authentication service
@@ -85,6 +86,7 @@ Repository/
 │   ├── SecurityHeadersMiddleware.cs    # Security headers
 │   ├── IPBlockingMiddleware.cs         # IP filtering
 │   ├── RateLimitingMiddleware.cs       # Rate limiting
+│   ├── ProxyProtocolConnectionHandler.cs # PROXY Protocol handler
 │   └── SubdirectoryRoutingMiddleware.cs # Subdirectory routing
 ├── Models/                # Data Models
 │   └── Config.cs                  # Configuration model
@@ -95,7 +97,7 @@ Repository/
 ├── pytest/                # Python examples
 ├── Repository/            # Repository directory (file storage)
 │   └── .keys/                     # Server key storage
-├── Config.json            # Main configuration file
+├── Config.yml            # Main configuration file
 └── help.txt               # Help documentation
 ```
 
@@ -126,7 +128,7 @@ Repository/
 
 ## Configuration
 
-The main configuration file `Config.json` supports the following options:
+The main configuration file `Config.yml` supports the following options:
 
 ### Basic Configuration
 | Option | Type | Default | Description |
@@ -149,12 +151,13 @@ The main configuration file `Config.json` supports the following options:
 | IPBlocking | bool | false | IP whitelist |
 | IPBlockingList | string | "" | Whitelist entries |
 | Blacklist | string | "" | Path blacklist |
-| DDoSProtection | bool | true | DDoS protection |
+| RequestThrottling | bool | true | Request throttling |
 | MaxRequestsPerMinute | int | 100 | Max requests per minute |
 | BlockDurationMinutes | int | 30 | Block duration |
 | RateLimitProtection | bool | false | Rate limit protection |
 | RateLimitRequestsPerSecond | int | 50 | Max requests per second |
 | RateLimitPauseMinutes | int | 5 | Pause duration when rate limit exceeded |
+| ProxyProtocolEnabled | bool | false | Enable PROXY Protocol support |
 
 #### Path Blacklist Format
 Use `|` (pipe) to separate multiple entries, supporting the following formats:

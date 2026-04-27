@@ -5,23 +5,30 @@ namespace Repository.Models
         public string IP { get; set; } = "0.0.0.0";
         public int Port { get; set; } = 8000;
         public string RepositoryPath { get; set; } = "./Repository";
+        
+        // IP封锁配置
         public bool IPBlocking { get; set; } = false;
-        public string IPBlockingList { get; set; } = "127.0.0.1:8000";
+        public string IPBlockingList { get; set; } = "";
         public string Blacklist { get; set; } = "";
+        
+        // 系统配置
         public bool GenerateHelp { get; set; } = true;
         public bool PintoTop { get; set; } = true;
         public bool Background { get; set; } = false;
         
-        // DDoS防护配置
-        public bool DDoSProtection { get; set; } = true;
-        public int MaxRequestsPerMinute { get; set; } = 100;
-        public int BlockDurationMinutes { get; set; } = 30;
+        // 请求限速配置
+        public bool RequestThrottling { get; set; } = true;
+        public int MaximumRequestsPerSecond { get; set; } = 50;
+        public int AlarmRequestsPerSecond { get; set; } = 30;
         public string BlockedIPs { get; set; } = "";
+        public string TemporarilyBlockedIPs { get; set; } = "";
+        public int BlockDurationMinutes { get; set; } = 30;
         
-        // 限流保护配置
-        public bool RateLimitProtection { get; set; } = false;
-        public int RateLimitRequestsPerSecond { get; set; } = 50;
-        public int RateLimitPauseMinutes { get; set; } = 5;
+        // 请求头过滤配置
+        public bool RequestHeaderFiltering { get; set; } = false;
+        public bool RequireUserAgent { get; set; } = true;
+        public bool RequireAccept { get; set; } = true;
+        public string AllowedBrowsers { get; set; } = "Chrome,Firefox,Safari,Edg,Opera,OPR,MSIE,Trident";
         
         // 文件上传配置
         public bool UploadEnabled { get; set; } = false;
@@ -58,6 +65,9 @@ namespace Repository.Models
 
         // HTTP配置
         public bool HttpEnabled { get; set; } = true;
+        
+        // PROXY Protocol配置
+        public bool ProxyProtocolEnabled { get; set; } = false;
         
         // 通知配置（仅Windows有效）
         public bool Notification { get; set; } = false;

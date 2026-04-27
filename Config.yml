@@ -1,0 +1,107 @@
+# Repository 配置文件
+# 语言: zh
+
+# 服务器监听地址（0.0.0.0 为所有接口，:: 为所有 IPv6 接口）
+IP: "::"
+# 仓库根目录路径
+RepositoryPath: "D:/仓库/"
+# 启用 HTTPS
+HttpsEnabled: true
+# HTTPS 端口号
+HttpsPort: 7813
+# SSL 证书文件路径
+HttpsCertificatePath: "D:\\服务器\\webdata_repo_ddns_net.crt"
+# SSL 证书密码（仅限PFX）
+HttpsCertificatePassword: ""
+# 启用 HTTP 到 HTTPS 重定向（需要启用http）
+HttpsRedirectEnabled: false
+# 用于证书生成的域名
+Domain: "repo.ddns.net"
+# 启用 HTTP（设为 false 时仅使用 HTTPS）
+HttpEnabled: false
+# HTTP端口号
+Port: 7813
+# 启用 IP 封锁
+IPBlocking: false
+# 隐藏的文件/文件夹名称和模式（用 | 分隔）
+Blacklist: "$RECYCLE.BIN|System Volume Information|WindowsApps|XboxGames|.GamingRoot|Program Files (x86)|ERROR|Program Files|*.log|"
+# 启动时生成 help.txt 文件
+GenerateHelp: true
+# 将控制台窗口置顶（仅 Windows）
+PintoTop: false
+# 后台运行/隐藏控制台（仅 Windows）
+Background: false
+# 启用请求限速（速率限制）
+RequestThrottling: true
+# 每秒最大请求值
+MaximumRequestsPerSecond: 50
+# 每秒告警请求值
+AlarmRequestsPerSecond: 30
+# 已封禁的IP
+BlockedIPs: "87.76.198.44"
+# 临时封锁的IP
+TemporarilyBlockedIPs: ""
+# 超过限制时的封禁时长（分钟）
+BlockDurationMinutes: 30
+# 启用请求头过滤
+RequestHeaderFiltering: true
+# User-Agent 请求头
+RequireUserAgent: true
+# Accept 请求头
+RequireAccept: true
+# 允许的浏览器标识符
+AllowedBrowsers: "Chrome,Firefox,Safari,Edg,Opera,OPR,MSIE,Trident"
+# 启用文件上传功能
+UploadEnabled: true
+# 最大上传文件大小（MB）
+MaxUploadSizeMB: 5
+# 允许上传的文件扩展名（逗号分隔）
+AllowedUploadExtensions: ".txt,.md,.json,.xml,.html,.css,.js,.cs,.py,.java,.c,.cpp,.h,.hpp,.sh,.bat,.ini,.log,.csv,.tsv,.jpg,.jpeg,.png,.gif,.bmp,.webp,.svg,.ico,.tiff,.tif,.mp3,.wav,.ogg,.flac,.aac,.m4a,.wma,.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.ogv,.zip,.rar,.7z,.tar,.gz,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.bin"
+# 允许覆盖已存在的文件
+AllowOverwrite: false
+# 允许上传到根目录
+AllowRootUpload: false
+# 最大磁盘使用百分比（0 = 无限制）
+MaxDiskUsagePercent: 0
+# 最大下载文件大小（MB）
+MaxDownloadSizeMB: 10000
+# 启用文件预览功能
+PreviewEnabled: true
+# 文本文件预览扩展名
+PreviewExtensions: ".txt,.md,.json,.xml,.html,.css,.js,.cs,.py,.java,.c,.cpp,.h,.hpp,.sh,.bat,.ini,.log,.csv,.tsv"
+# 图片预览扩展名
+ImagePreviewExtensions: ".jpg,.jpeg,.png,.gif,.bmp,.webp,.svg,.ico,.tiff,.tif"
+# 音频预览扩展名
+AudioPreviewExtensions: ".mp3,.wav,.ogg,.flac,.aac,.m4a,.wma"
+# 视频预览扩展名
+VideoPreviewExtensions: ".mp4,.avi,.mov,.wmv,.flv,.webm,.mkv,.m4v,.3gp,.ogv"
+# 禁止下载的路径
+ForbiddenDownloadPaths: "awa/*"
+# 禁止预览的路径
+ForbiddenPreviewPaths: ""
+# 隐藏的路径
+HiddenPaths: ""
+# 启用路径保护
+ProtectEnabled: true
+# 受保护的路径
+ProtectPaths: "UPDATA"
+# 启用 PROXY Protocol 支持
+ProxyProtocolEnabled: true
+# 启用系统通知（仅 Windows）
+Notification: true
+# 启用管理面板
+AdminEnabled: true
+# 管理员用户名
+AdminUsername: "XSY-xiaoqi"
+# 管理员密码
+AdminPassword: "Hyh898721"
+# 界面语言
+Language: "zh"
+# 访问统计（由系统填充）
+AccessCount: 120
+# 崩溃时自动重启
+AutoRestart: false
+# 最大重启尝试次数
+MaxRestartAttempts: 3
+# 当前重启次数（由系统填充）
+RestartCount: 0

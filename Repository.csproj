@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Config.json">
+    <None Update="Config.yml">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -22,9 +22,13 @@
   <ItemGroup>
     <EmbeddedResource Include="help.txt" />
     <EmbeddedResource Include="lang.yml" />
+    <EmbeddedResource Include="Config.yml" />
     <EmbeddedResource Include="DirectoryListing.Html" />
     <EmbeddedResource Include="DirectoryListing.Css" />
     <EmbeddedResource Include="DirectoryListing.JS" />
+    <EmbeddedResource Include="Admin.Html" />
+    <EmbeddedResource Include="Admin.Css" />
+    <EmbeddedResource Include="Admin.JS" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,25 +10,27 @@ namespace Repository.Controllers
         private readonly ProtectionService _protectionService;
         private readonly Logger _logger;
         private readonly ConfigManager _configManager;
+        private readonly ClientIPService _clientIPService;
 
-        public KeyManagementController(KeyManagementService keyManagementService, ProtectionService protectionService, Logger logger, ConfigManager configManager)
+        public KeyManagementController(KeyManagementService keyManagementService, ProtectionService protectionService, Logger logger, ConfigManager configManager, ClientIPService clientIPService)
         {
             _keyManagementService = keyManagementService;
             _protectionService = protectionService;
             _logger = logger;
             _configManager = configManager;
+            _clientIPService = clientIPService;
         }
 
         [HttpGet("api/keys/server")]
         public IActionResult GetServerPublicKey()
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
             try
             {
                 var publicKeyPem = _keyManagementService.GetServerPublicKeyPem();
                 
-                _logger.LogInfo($"服务器公钥请求，客户端IP: {clientIP}");
+                _logger.LogInfo(I18nService.Instance.T("key_management.public_key_request", clientIP));
                 
                 return Ok(new
                 {
@@ -46,7 +48,7 @@ namespace Repository.Controllers
         [HttpPost("api/keys/register")]
         public IActionResult RegisterClientPublicKey([FromBody] ClientKeyRequest request)
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
             try
             {
@@ -66,7 +68,7 @@ namespace Repository.Controllers
                 {
                     _keyManagementService.SetSharedToken(request.ClientId, request.SharedToken);
                     _protectionService.RefreshSecureHandlerForClient(request.ClientId);
-                    _logger.LogInfo($"客户端公钥注册成功，客户端ID: {request.ClientId}，IP: {clientIP}");
+                    _logger.LogInfo(I18nService.Instance.T("key_management.public_key_success", request.ClientId, clientIP));
                     
                     return Ok(new
                     {
@@ -88,7 +90,7 @@ namespace Repository.Controllers
         [HttpPost("api/keys/verify")]
         public async Task<IActionResult> VerifyRequest([FromBody] VerifyRequest request)
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
             try
             {
@@ -106,7 +108,7 @@ namespace Repository.Controllers
                 
                 if (success)
                 {
-                    _logger.LogInfo($"验证请求成功，客户端ID: {request.ClientId}，IP: {clientIP}，路径: {request.Path}");
+                    _logger.LogInfo(I18nService.Instance.T("key_management.verify_success", request.ClientId, clientIP, request.Path));
                     return Ok(new
                     {
                         success = true,
@@ -115,7 +117,7 @@ namespace Repository.Controllers
                     });
                 }
                 
-                _logger.LogWarning($"验证请求失败，客户端ID: {request.ClientId}，IP: {clientIP}");
+                _logger.LogWarning(I18nService.Instance.T("key_management.verify_failed", request.ClientId, clientIP));
                 return Unauthorized("验证失败");
             }
             catch (Exception ex)
@@ -128,12 +130,12 @@ namespace Repository.Controllers
         [HttpDelete("api/keys/client/{clientId}")]
         public IActionResult RemoveClient(string clientId)
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
             try
             {
                 _keyManagementService.RemoveClient(clientId);
-                _logger.LogInfo($"移除客户端，客户端ID: {clientId}，IP: {clientIP}");
+                _logger.LogInfo(I18nService.Instance.T("key_management.remove_client", clientId, clientIP));
                 
                 return Ok(new
                 {
@@ -146,21 +148,6 @@ namespace Repository.Controllers
                 _logger.LogError(ex, $"移除客户端失败，客户端IP: {clientIP}");
                 return StatusCode(500, "移除失败");
             }
-        }
-
-        private string GetClientIP()
-        {
-            var forwardedFor = Request.Headers["X-Forwarded-For"].ToString();
-            if (!string.IsNullOrEmpty(forwardedFor))
-            {
-                var ips = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                if (ips.Length > 0)
-                {
-                    return ips[0].Trim();
-                }
-            }
-            
-            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         }
     }
 

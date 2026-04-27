@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/api/log" type="image/x-icon">
+    <title>Repository 管理</title>
+    <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+    <div class="login-container" id="loginContainer">
+        <h2>管理员登录</h2>
+        <div class="form-group">
+            <label for="username">用户名</label>
+            <input type="text" id="username" placeholder="请输入用户名">
+        </div>
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" placeholder="请输入密码">
+        </div>
+        <button class="btn" id="loginBtn" onclick="login()">登录</button>
+        <div class="error" id="loginError"></div>
+    </div>
+
+    <div class="admin-container" id="adminContainer">
+        <div class="header">
+            <h1>Repository 管理</h1>
+            <div class="header-actions">
+                <button onclick="showLogsModal()" style="background: #17a2b8; margin-right: 10px;">查看日志</button>
+                <button onclick="showSettingsModal()" style="background: #28a745; margin-right: 10px;">服务器设置</button>
+                <button onclick="logout()">退出登录</button>
+            </div>
+        </div>
+        <div class="content">
+            <div class="breadcrumb" id="breadcrumb">
+                <a href="#" onclick="navigateTo('')">根目录</a>
+            </div>
+            <div style="padding: 15px; border-bottom: 1px solid #dee2e6;">
+                <button class="action-btn btn-create" onclick="showCreateDirModal()">新建目录</button>
+                <button class="action-btn" style="background: #17a2b8; color: white;" onclick="showUploadModal()">上传文件</button>
+                <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(event)">
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>名称</th>
+                        <th>大小</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="fileList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="moveModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>移动/重命名</h3></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>新路径</label>
+                    <input type="text" id="newPathInput" style="width: 100%; padding: 8px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeMoveModal()">取消</button>
+                <button class="btn-confirm" onclick="confirmMove()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="createDirModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>新建目录</h3></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>目录名称</label>
+                    <input type="text" id="dirNameInput" style="width: 100%; padding: 8px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeCreateDirModal()">取消</button>
+                <button class="btn-confirm" onclick="confirmCreateDir()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="logsModal">
+        <div class="modal-content" style="width: 800px; max-height: 70vh; margin: 5vh auto; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="modal-header"><h3>日志文件</h3></div>
+            <div class="modal-body" style="flex: 1; overflow: auto;">
+                <div id="logsList">加载中...</div>
+                <div id="logContent" style="display: none; margin-top: 15px;">
+                    <div style="margin-bottom: 10px;">
+                        <button class="btn-cancel" onclick="backToLogsList()">返回列表</button>
+                        <span id="currentLogFile" style="margin-left: 10px; font-weight: bold;"></span>
+                    </div>
+                    <pre id="logText" style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow: auto; max-height: 50vh; white-space: pre-wrap; word-break: break-all; font-size: 12px;"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeLogsModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content" style="width: 600px; max-height: 80vh; margin: 5vh auto; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="modal-header"><h3>服务器设置</h3></div>
+            <div class="modal-body" style="flex: 1; overflow: auto; padding: 20px;">
+                <div id="settingsContent">加载中...</div>
+                <div id="rateLimitStatus" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; display: none;">
+                    <h4 style="margin-bottom: 10px;">限流状态</h4>
+                    <div id="rateLimitInfo"></div>
+                    <button id="forceResumeBtn" style="margin-top: 10px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;" onclick="forceResumeRateLimit()">强制恢复服务</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeSettingsModal()">关闭</button>
+                <button class="btn-confirm" onclick="saveSettings()">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/admin.js"></script>
+</body>
+</html>

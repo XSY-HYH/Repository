@@ -5,59 +5,37 @@ namespace Repository.Middleware
     public class RateLimitingMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly DDoSProtectionService _ddosProtectionService;
+        private readonly RequestThrottlingService _requestThrottlingService;
+        private readonly ClientIPService _clientIPService;
         private readonly Logger _logger;
 
-        public RateLimitingMiddleware(RequestDelegate next, DDoSProtectionService ddosProtectionService, Logger logger)
+        public RateLimitingMiddleware(RequestDelegate next, RequestThrottlingService requestThrottlingService, ClientIPService clientIPService, Logger logger)
         {
             _next = next;
-            _ddosProtectionService = ddosProtectionService;
+            _requestThrottlingService = requestThrottlingService;
+            _clientIPService = clientIPService;
             _logger = logger;
         }
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var clientIP = GetClientIP(context);
+            var clientIP = _clientIPService.GetClientIP(context);
             
-            if (_ddosProtectionService.IsIPBlocked(clientIP))
+            if (_requestThrottlingService.IsIPblocked(clientIP))
             {
-                _logger.LogWarning($"Rate Limiting: Access denied for blocked client {clientIP} to {context.Request.Path}");
-                context.Response.StatusCode = 429;
-                await context.Response.WriteAsync("Too many requests. Your client has been temporarily blocked due to excessive requests.");
+                _logger.LogWarning(I18nService.Instance.T("rate_limiting.access_denied_blocked", clientIP, context.Request.Path));
+                await AccessDeniedHandler.HandleAsync(context, "IP Blocked");
                 return;
             }
 
-            if (!_ddosProtectionService.CheckAndUpdateRequestRate(clientIP))
+            if (!_requestThrottlingService.CheckAndUpdateRequestRate(clientIP))
             {
-                _logger.LogWarning($"Rate Limiting: Access denied for {clientIP} to {context.Request.Path} due to rate limiting");
-                
-                context.Response.StatusCode = 429;
-                await context.Response.WriteAsync("Too many requests. Please try again later.");
+                _logger.LogWarning(I18nService.Instance.T("rate_limiting.access_denied_limited", clientIP, context.Request.Path));
+                await AccessDeniedHandler.HandleAsync(context, "Rate Limited");
                 return;
             }
 
             await _next(context);
-        }
-
-        private string GetClientIP(HttpContext context)
-        {
-            var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(forwardedFor))
-            {
-                var ips = forwardedFor.Split(',').Select(ip => ip.Trim()).ToList();
-                if (ips.Count > 0)
-                {
-                    return ips[0];
-                }
-            }
-
-            var realIP = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(realIP))
-            {
-                return realIP;
-            }
-
-            return context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
         }
     }
 

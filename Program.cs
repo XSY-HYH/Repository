@@ -58,6 +58,8 @@ namespace Repository
     {
         public static void Main(string[] args)
         {
+            bool isDebug = args.Contains("--debug");
+            
             if (ShouldAutoRestart())
             {
                 AutoRestart(args);
@@ -75,9 +77,11 @@ namespace Repository
 
             builder.Services.AddSingleton<Logger>();
             builder.Services.AddSingleton<ConfigManager>();
+            builder.Services.AddSingleton<ProxyProtocolService>();
+            builder.Services.AddSingleton<ClientIPService>();
             builder.Services.AddSingleton<IPBlockingService>();
-            builder.Services.AddSingleton<DDoSProtectionService>();
-            builder.Services.AddSingleton<RateLimitProtectionService>();
+            builder.Services.AddSingleton<RequestThrottlingService>();
+            builder.Services.AddSingleton<RequestHeaderFilteringService>();
             builder.Services.AddSingleton<BlacklistService>();
             builder.Services.AddSingleton<FileWatcherService>();
             builder.Services.AddSingleton<TemporaryLinkService>();
@@ -92,10 +96,136 @@ namespace Repository
             var tempConfigManager = new ConfigManager(new Logger());
             var tempConfig = tempConfigManager.GetConfig();
             
+            if (tempConfig.HttpsEnabled && string.IsNullOrEmpty(tempConfig.HttpsCertificatePath))
+            {
+                var tempLogger = new Logger();
+                var certGenerator = new CertificateGenerator(tempLogger);
+                var (certPath, keyPath) = certGenerator.GenerateSelfSignedCertificate(
+                    tempConfig.Domain, 
+                    Directory.GetCurrentDirectory());
+                
+                if (!string.IsNullOrEmpty(certPath) && !string.IsNullOrEmpty(keyPath))
+                {
+                    tempConfig.HttpsCertificatePath = certPath.Replace('\\', '/');
+                    tempConfig.HttpsCertificatePassword = "";
+                    tempConfigManager.SaveConfig(tempConfig);
+                }
+            }
+            
             builder.Services.AddHttpsRedirection(options =>
             {
                 options.HttpsPort = tempConfig.HttpsPort;
             });
+
+            var proxyProtocolLogger = new Logger();
+            proxyProtocolLogger.SetDebugMode(isDebug);
+            var proxyProtocolService = new ProxyProtocolService(proxyProtocolLogger);
+            builder.Services.AddSingleton(proxyProtocolService);
+
+            if (tempConfig.ProxyProtocolEnabled)
+            {
+                builder.WebHost.ConfigureKestrel(options =>
+                {
+                    bool shouldEnableHttp = tempConfig.HttpEnabled;
+                    if (!tempConfig.HttpsEnabled)
+                    {
+                        shouldEnableHttp = true;
+                    }
+                    
+                    if (shouldEnableHttp)
+                    {
+                        options.ListenAnyIP(tempConfig.Port, listenOptions =>
+                        {
+                            listenOptions.Use(next =>
+                            {
+                                return async context =>
+                                {
+                                    var input = context.Transport.Input;
+                                    var result = await input.ReadAsync();
+                                    var buffer = result.Buffer;
+
+                                    if (!buffer.IsEmpty)
+                                    {
+                                        var data = buffer.First.ToArray();
+                                        proxyProtocolLogger.LogDebug($"[{context.ConnectionId}] Received {data.Length} bytes: {BitConverter.ToString(data)}");
+                                        
+                                        var (sourceIP, bytesConsumed) = proxyProtocolService.ParseHeader(data);
+
+                                        if (bytesConsumed > 0 && sourceIP != null)
+                                        {
+                                            proxyProtocolLogger.LogDebug($"[{context.ConnectionId}] PROXY Protocol detected: {sourceIP}, header size: {bytesConsumed} bytes");
+                                            proxyProtocolService.ConnectionIPs[context.ConnectionId] = sourceIP;
+                                            input.AdvanceTo(buffer.GetPosition(bytesConsumed), buffer.End);
+                                        }
+                                        else
+                                        {
+                                            input.AdvanceTo(buffer.Start);
+                                        }
+                                    }
+
+                                    await next(context);
+                                };
+                            });
+                        });
+                    }
+                    
+                    if (tempConfig.HttpsEnabled)
+                    {
+                        var certPath = tempConfig.HttpsCertificatePath;
+                        var finalKeyPath = Path.ChangeExtension(certPath, ".key");
+                        
+                        if (!string.IsNullOrEmpty(certPath) && !Path.IsPathRooted(certPath))
+                        {
+                            certPath = Path.GetFullPath(certPath);
+                            finalKeyPath = Path.GetFullPath(finalKeyPath);
+                        }
+                        
+                        options.ListenAnyIP(tempConfig.HttpsPort, listenOptions =>
+                        {
+                            listenOptions.Use(next =>
+                            {
+                                return async context =>
+                                {
+                                    var input = context.Transport.Input;
+                                    var result = await input.ReadAsync();
+                                    var buffer = result.Buffer;
+
+                                    if (!buffer.IsEmpty)
+                                    {
+                                        var data = buffer.First.ToArray();
+                                        proxyProtocolLogger.LogDebug($"[{context.ConnectionId}] Received {data.Length} bytes: {BitConverter.ToString(data)}");
+                                        
+                                        var (sourceIP, bytesConsumed) = proxyProtocolService.ParseHeader(data);
+
+                                        if (bytesConsumed > 0 && sourceIP != null)
+                                        {
+                                            proxyProtocolLogger.LogDebug($"[{context.ConnectionId}] PROXY Protocol detected: {sourceIP}, header size: {bytesConsumed} bytes");
+                                            proxyProtocolService.ConnectionIPs[context.ConnectionId] = sourceIP;
+                                            input.AdvanceTo(buffer.GetPosition(bytesConsumed));
+                                        }
+                                        else
+                                        {
+                                            input.AdvanceTo(buffer.Start);
+                                        }
+                                    }
+
+                                    await next(context);
+                                };
+                            });
+
+                            if (!string.IsNullOrEmpty(certPath) && File.Exists(certPath) && File.Exists(finalKeyPath))
+                            {
+                                var certPem = File.ReadAllText(certPath);
+                                var keyPem = File.ReadAllText(finalKeyPath);
+                                var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(
+                                    System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPem(certPem, keyPem).Export(
+                                        System.Security.Cryptography.X509Certificates.X509ContentType.Pfx), null);
+                                listenOptions.UseHttps(cert);
+                            }
+                        });
+                    }
+                });
+            }
 
             var app = builder.Build();
 
@@ -104,6 +234,7 @@ namespace Repository
             var notificationService = app.Services.GetRequiredService<NotificationService>();
             var ipBlockingService = app.Services.GetRequiredService<IPBlockingService>();
             
+            logger.SetDebugMode(isDebug);
             logger.SetNotificationService(notificationService);
             logger.SetConfigManager(configManager);
             I18nService.Instance.SetLogger(logger);
@@ -125,8 +256,17 @@ namespace Repository
             app.UseSecurityHeaders();
             app.UseIPBlocking();
             app.UseRateLimiting();
-            app.UseRateLimitProtection();
+            app.UseRequestHeaderFiltering();
             app.UseSubdirectoryRouting();
+
+            app.Use(async (context, next) =>
+            {
+                await next();
+                if (context.Response.StatusCode == 405)
+                {
+                    context.Response.StatusCode = 404;
+                }
+            });
 
             app.UseWebSockets(new WebSocketOptions
             {
@@ -285,73 +425,88 @@ namespace Repository
                         shouldEnableHttp = true;
                     }
                     
-                    if (shouldEnableHttp)
+                    if (!config.ProxyProtocolEnabled)
                     {
-                        string httpUrl = $"http://{formattedAddress}:{config.Port}";
-                        app.Urls.Add(httpUrl);
-                        logger.LogInfo(I18nService.Instance.T("http.enabled", httpUrl));
-                    }
-                    else
-                    {
-                        logger.LogInfo(I18nService.Instance.T("http.disabled"));
-                    }
-                    
-                    if (config.HttpsEnabled)
-                    {
-                        string httpsUrl = $"https://{formattedAddress}:{config.HttpsPort}";
-                        app.Urls.Add(httpsUrl);
-                        
-                        bool hasValidCertificate = false;
-                        
-                        if (!string.IsNullOrEmpty(config.HttpsCertificatePath) && 
-                            System.IO.File.Exists(config.HttpsCertificatePath))
+                        if (shouldEnableHttp)
                         {
-                            hasValidCertificate = true;
-                            logger.LogInfo(I18nService.Instance.T("https.using_cert", config.HttpsCertificatePath));
+                            string httpUrl = $"http://{formattedAddress}:{config.Port}";
+                            app.Urls.Add(httpUrl);
+                            logger.LogInfo(I18nService.Instance.T("http.enabled", httpUrl));
                         }
                         else
                         {
-                            logger.LogInfo(I18nService.Instance.T("https.generating_cert"));
-                            
-                            var certGenerator = new CertificateGenerator(logger);
-                            var (certPath, keyPath) = certGenerator.GenerateSelfSignedCertificate(
-                                config.Domain, 
-                                Directory.GetCurrentDirectory());
-                            
-                            if (!string.IsNullOrEmpty(certPath) && !string.IsNullOrEmpty(keyPath))
+                            logger.LogInfo(I18nService.Instance.T("http.disabled"));
+                        }
+                        
+                        if (config.HttpsEnabled)
+                        {
+                            string httpsUrl = $"https://{formattedAddress}:{config.HttpsPort}";
+                            app.Urls.Add(httpsUrl);
+                        
+                            bool hasValidCertificate = false;
+                        
+                            if (!string.IsNullOrEmpty(config.HttpsCertificatePath) && 
+                                System.IO.File.Exists(config.HttpsCertificatePath))
                             {
                                 hasValidCertificate = true;
-                                logger.LogInfo(I18nService.Instance.T("https.cert_generated"));
-                                
-                                config.HttpsCertificatePath = certPath;
-                                config.HttpsCertificatePassword = "";
-                                configManager.SaveConfig(config);
+                                logger.LogInfo(I18nService.Instance.T("https.using_cert", config.HttpsCertificatePath));
                             }
-                        }
-                        
-                        if (!hasValidCertificate)
-                        {
-                            logger.LogWarning(I18nService.Instance.T("https.cert_invalid"));
-                        }
-                        
-                        logger.LogInfo(I18nService.Instance.T("https.enabled", httpsUrl));
-                        
-                        if (config.HttpsRedirectEnabled && shouldEnableHttp)
-                        {
-                            logger.LogInfo(I18nService.Instance.T("https.redirect_active"));
-                        }
-                        else if (!config.HttpsRedirectEnabled)
-                        {
-                            logger.LogInfo(I18nService.Instance.T("https.redirect_disabled"));
-                        }
-                        else if (!shouldEnableHttp)
-                        {
-                            logger.LogInfo(I18nService.Instance.T("https.redirect_not_active"));
+                            else
+                            {
+                                logger.LogInfo(I18nService.Instance.T("https.generating_cert"));
+                                
+                                var certGenerator = new CertificateGenerator(logger);
+                                var (certPath, keyPath) = certGenerator.GenerateSelfSignedCertificate(
+                                    config.Domain, 
+                                    Directory.GetCurrentDirectory());
+                                
+                                if (!string.IsNullOrEmpty(certPath) && !string.IsNullOrEmpty(keyPath))
+                                {
+                                    hasValidCertificate = true;
+                                    logger.LogInfo(I18nService.Instance.T("https.cert_generated"));
+                                    
+                                    config.HttpsCertificatePath = certPath;
+                                    config.HttpsCertificatePassword = "";
+                                    configManager.SaveConfig(config);
+                                }
+                            }
+                            
+                            if (!hasValidCertificate)
+                            {
+                                logger.LogWarning(I18nService.Instance.T("https.cert_invalid"));
+                            }
+                            
+                            logger.LogInfo(I18nService.Instance.T("https.enabled", httpsUrl));
+                            
+                            if (config.HttpsRedirectEnabled && shouldEnableHttp)
+                            {
+                                logger.LogInfo(I18nService.Instance.T("https.redirect_active"));
+                            }
+                            else if (!config.HttpsRedirectEnabled)
+                            {
+                                logger.LogInfo(I18nService.Instance.T("https.redirect_disabled"));
+                            }
+                            else if (!shouldEnableHttp)
+                            {
+                                logger.LogInfo(I18nService.Instance.T("https.redirect_not_active"));
+                            }
                         }
                     }
                     else
                     {
-                        logger.LogInfo(I18nService.Instance.T("https.disabled"));
+                        if (config.HttpsEnabled)
+                        {
+                            logger.LogInfo(I18nService.Instance.T("https.enabled", $"https://{formattedAddress}:{config.HttpsPort}"));
+                        }
+                        else
+                        {
+                            logger.LogInfo(I18nService.Instance.T("https.disabled"));
+                        }
+                    }
+                    
+                    if (config.ProxyProtocolEnabled)
+                    {
+                        logger.LogInfo("PROXY Protocol: Enabled");
                     }
                     
                     StringBuilder listenInfo = new StringBuilder(I18nService.Instance.T("listen.info", $"({addressInfo})"));
@@ -376,9 +531,9 @@ namespace Repository
                         if (adminConnectionManager.ConnectionCount > 0)
                         {
                             logger.LogInfo(I18nService.Instance.T("admin.notifying", adminConnectionManager.ConnectionCount));
-                            await adminConnectionManager.NotifyAllAsync("服务器即将关闭");
+                            await adminConnectionManager.NotifyAllAsync(I18nService.Instance.T("admin.server_shutdown"));
                             await Task.Delay(500);
-                            await adminConnectionManager.CloseAllAsync("服务器关闭");
+                            await adminConnectionManager.CloseAllAsync(I18nService.Instance.T("admin.server_closing"));
                         }
                         
                         lifetime.StopApplication();

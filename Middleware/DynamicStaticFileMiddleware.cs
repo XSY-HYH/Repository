@@ -26,7 +26,7 @@ namespace Repository.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "未知IP";
+            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? I18nService.Instance.T("dynamic_static.unknown_ip");
             var userAgent = context.Request.Headers["User-Agent"].ToString();
             var method = context.Request.Method;
             var requestPath = context.Request.Path.HasValue ? context.Request.Path.Value : "";
@@ -52,7 +52,7 @@ namespace Repository.Middleware
                 }
                 catch (UriFormatException ex)
                 {
-                    _logger.LogError(ex, "路径解码失败");
+                    _logger.LogError(ex, I18nService.Instance.T("dynamic_static.path_decode_failed"));
                     context.Response.StatusCode = 400;
                     _logger.LogSeparator();
                     return;
@@ -80,21 +80,22 @@ namespace Repository.Middleware
                     var blacklistRelativePath = await Task.Run(() => GetRelativePath(_configManager.GetConfig().RepositoryPath, fileInfo.PhysicalPath ?? ""));
                     if (_blacklistService.IsPathBlacklisted(blacklistRelativePath))
                     {
-                        _logger.LogWarning($"文件下载被黑名单阻止: {blacklistRelativePath}");
+                        _logger.LogWarning(I18nService.Instance.T("dynamic_static.download_blocked_blacklist", blacklistRelativePath));
                         context.Response.StatusCode = 404;
                         return;
                     }
                     
                     var config = _configManager.GetConfig();
                     var isForbidden = await Task.Run(() => IsDownloadForbidden(relativePath, config.ForbiddenDownloadPaths));
-                    _logger.LogInfo($"下载权限检查 - 文件路径: {relativePath}, 禁止下载配置: {config.ForbiddenDownloadPaths}, 检查结果: {(isForbidden ? "禁止下载" : "允许下载")}");
+                    var resultText = isForbidden ? I18nService.Instance.T("dynamic_static.download_blocked_config") : I18nService.Instance.T("dynamic_static.check_forbidden");
+                    _logger.LogInfo(I18nService.Instance.T("dynamic_static.download_forbidden_check", relativePath, config.ForbiddenDownloadPaths, resultText));
                     
                     if (isForbidden)
                     {
-                        _logger.LogWarning($"文件下载被配置阻止: {relativePath}");
+                        _logger.LogWarning(I18nService.Instance.T("dynamic_static.download_blocked_config", relativePath));
                         context.Response.StatusCode = 403;
                         context.Response.ContentType = "application/json";
-                        await context.Response.WriteAsync("{\"error\":\"文件已被管理员禁止下载\"}");
+                        await context.Response.WriteAsync($"{{\"error\":\"{I18nService.Instance.T("dynamic_static.download_forbidden_response")}\"}}");
                         _logger.LogSeparator();
                         return;
                     }
@@ -172,25 +173,25 @@ namespace Repository.Middleware
             if (string.IsNullOrWhiteSpace(forbiddenPaths))
                 return false;
 
-            _logger.LogInfo($"检查文件是否被禁止下载: {relativePath}");
+            _logger.LogInfo(I18nService.Instance.T("dynamic_static.check_forbidden", relativePath));
             
             var normalizedPath = relativePath.TrimStart('/');
-            _logger.LogInfo($"规范化路径: {normalizedPath}");
+            _logger.LogInfo(I18nService.Instance.T("dynamic_static.normalized_path", normalizedPath));
             
             var forbiddenList = forbiddenPaths.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(path => path.Trim())
                 .ToList();
             
-            _logger.LogInfo($"禁止路径列表: {string.Join(", ", forbiddenList)}");
+            _logger.LogInfo(I18nService.Instance.T("dynamic_static.forbidden_list", string.Join(", ", forbiddenList)));
             
             foreach (var forbiddenPath in forbiddenList)
             {
                 var normalizedForbiddenPath = forbiddenPath.TrimStart('/');
-                _logger.LogInfo($"检查禁止路径: {normalizedForbiddenPath}");
+                _logger.LogInfo(I18nService.Instance.T("dynamic_static.check_path", normalizedForbiddenPath));
                 
                 if (string.Equals(normalizedPath, normalizedForbiddenPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogInfo($"精确匹配成功: {normalizedPath} == {normalizedForbiddenPath}");
+                    _logger.LogInfo(I18nService.Instance.T("dynamic_static.exact_match", normalizedPath, normalizedForbiddenPath));
                     return true;
                 }
                 
@@ -199,7 +200,7 @@ namespace Repository.Middleware
                     var directoryPath = normalizedForbiddenPath.TrimEnd('/');
                     if (normalizedPath.StartsWith(directoryPath + "/", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInfo($"目录匹配成功: {normalizedPath} 在目录 {directoryPath} 下");
+                        _logger.LogInfo(I18nService.Instance.T("dynamic_static.directory_match", normalizedPath, directoryPath));
                         return true;
                     }
                 }
@@ -209,13 +210,13 @@ namespace Repository.Middleware
                     var fileName = Path.GetFileName(normalizedPath);
                     if (string.Equals(fileName, normalizedForbiddenPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInfo($"文件名匹配成功: {fileName} == {normalizedForbiddenPath}");
+                        _logger.LogInfo(I18nService.Instance.T("dynamic_static.filename_match", fileName, normalizedForbiddenPath));
                         return true;
                     }
                 }
             }
             
-            _logger.LogInfo($"未匹配任何禁止路径: {normalizedPath}");
+            _logger.LogInfo(I18nService.Instance.T("dynamic_static.no_match", normalizedPath));
             return false;
         }
 

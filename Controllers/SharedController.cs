@@ -13,11 +13,13 @@ namespace Repository.Controllers
     {
         private readonly ConfigManager _configManager;
         private readonly Logger _logger;
+        private readonly ClientIPService _clientIPService;
 
-        public SharedController(ConfigManager configManager, Logger logger)
+        public SharedController(ConfigManager configManager, Logger logger, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
+            _clientIPService = clientIPService;
         }
 
         /// <summary>
@@ -35,16 +37,16 @@ namespace Repository.Controllers
                 
                 if (System.IO.File.Exists(exeRootFaviconPath))
                 {
-                    _logger.LogInfo($"返回 EXE 根目录下的 favicon.ico: {exeRootFaviconPath}");
+                    _logger.LogInfo(I18nService.Instance.T("shared.favicon_root", exeRootFaviconPath));
                     return File(System.IO.File.ReadAllBytes(exeRootFaviconPath), "image/x-icon");
                 }
                 
-                _logger.LogWarning("未找到 favicon.ico 文件，将返回 404");
+                _logger.LogWarning(I18nService.Instance.T("shared.favicon_not_found"));
                 return NotFound();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取 favicon 时发生错误");
+                _logger.LogError(ex, I18nService.Instance.T("shared.favicon_error"));
                 return NotFound();
             }
         }
@@ -57,11 +59,10 @@ namespace Repository.Controllers
         [HttpGet("api/system/info")]
         public IActionResult GetSystemInfo()
         {
-            // 获取客户端IP地址
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
             // 记录系统信息请求开始
-            _logger.LogInfo($"开始处理系统信息请求，客户端IP: {clientIP}");
+            _logger.LogInfo(I18nService.Instance.T("shared.system_info_request", clientIP));
             
             try
             {
@@ -72,8 +73,8 @@ namespace Repository.Controllers
                  // 由于Config类中没有SystemInfoEnabled属性，我们使用PreviewEnabled作为替代
                  if (!config.PreviewEnabled)
                  {
-                     _logger.LogWarning($"系统信息访问功能已禁用，客户端IP: {clientIP}");
-                     return StatusCode(403, "系统信息访问功能已禁用");
+                     _logger.LogWarning(I18nService.Instance.T("shared.system_info_disabled", clientIP));
+                     return StatusCode(403, I18nService.Instance.T("shared.system_info_disabled_response"));
                  }
                  
                  // 获取系统信息
@@ -94,50 +95,15 @@ namespace Repository.Controllers
                      serverTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                  };
                 
-                _logger.LogInfo($"系统信息获取成功，客户端IP: {clientIP}");
+                _logger.LogInfo(I18nService.Instance.T("shared.system_info_success", clientIP));
                 
                 // 返回系统信息
                 return Ok(systemInfo);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取系统信息时发生未知错误");
-                return StatusCode(500, "服务器内部错误");
-            }
-        }
-
-        /// <summary>
-        /// 获取客户端IP地址
-        /// </summary>
-        private string GetClientIP()
-        {
-            try
-            {
-                var httpContext = HttpContext;
-                
-                // 首先检查X-Forwarded-For头部（代理服务器）
-                var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(forwardedFor))
-                {
-                    // X-Forwarded-For可能包含多个IP，取第一个
-                    var ips = forwardedFor.Split(',').Select(ip => ip.Trim());
-                    return ips.FirstOrDefault() ?? "Unknown";
-                }
-                
-                // 检查X-Real-IP头部
-                var realIP = httpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(realIP))
-                {
-                    return realIP;
-                }
-                
-                // 最后使用RemoteIpAddress
-                return httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取客户端IP地址时发生错误");
-                return "Unknown";
+                _logger.LogError(ex, I18nService.Instance.T("shared.system_info_error"));
+                return StatusCode(500, I18nService.Instance.T("shared.server_error"));
             }
         }
 

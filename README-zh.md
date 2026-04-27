@@ -16,7 +16,7 @@
 ### 安全防护
 - **IP 过滤**：支持白名单模式，仅允许指定 IP 访问
 - **黑名单机制**：支持路径黑名单，阻止访问敏感目录
-- **DDoS 防护**：限制单个 IP 的请求频率，防止恶意攻击（没啥大用）
+- **请求限速**：限制单个 IP 的请求频率，防止恶意攻击
 - **路径安全**：防止目录遍历攻击，确保访问范围受限
 
 ### 目录保护
@@ -72,7 +72,8 @@ Repository/
 │   ├── ConfigManager.cs           # 配置管理
 │   ├── ProtectionService.cs       # 目录保护服务
 │   ├── BlacklistService.cs        # 黑名单服务
-│   ├── DDoSProtectionService.cs   # DDoS 防护服务
+│   ├── RequestThrottlingService.cs   # 请求限速服务
+│   ├── ProxyProtocolService.cs    # PROXY Protocol 解析服务
 │   ├── KeyManagementService.cs    # 密钥管理服务
 │   ├── SecureSessionService.cs    # 安全会话服务
 │   ├── ChapAuthService.cs         # CHAP 认证服务
@@ -83,6 +84,7 @@ Repository/
 │   ├── SecurityHeadersMiddleware.cs    # 安全响应头
 │   ├── IPBlockingMiddleware.cs         # IP 过滤
 │   ├── RateLimitingMiddleware.cs       # 速率限制
+│   ├── ProxyProtocolConnectionHandler.cs # PROXY Protocol 处理器
 │   └── SubdirectoryRoutingMiddleware.cs # 子目录路由
 ├── Models/                # 数据模型
 │   └── Config.cs                  # 配置模型
@@ -93,7 +95,7 @@ Repository/
 ├── pytest/                # Python 示例
 ├── Repository/            # 仓库目录（文件存储）
 │   └── .keys/                     # 服务端密钥存储
-├── Config.json            # 主配置文件
+├── Config.yml            # 主配置文件
 └── help.txt               # 帮助文档
 ```
 
@@ -147,7 +149,7 @@ Repository/
 | IPBlocking | bool | false | IP 白名单 |
 | IPBlockingList | string | "" | 白名单列表 |
 | Blacklist | string | "" | 路径黑名单 |
-| DDoSProtection | bool | true | DDoS 防护 |
+| RequestThrottling | bool | true | 请求限速 |
 | MaxRequestsPerMinute | int | 100 | 每分钟最大请求数 |
 | BlockDurationMinutes | int | 30 | 封禁时长 |
 | RateLimitProtection | bool | false | 限流保护 |

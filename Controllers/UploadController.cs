@@ -11,28 +11,30 @@ namespace Repository.Controllers
         private readonly Logger _logger;
         private readonly BlacklistService _blacklistService;
         private readonly ProtectionService _protectionService;
+        private readonly ClientIPService _clientIPService;
 
-        public UploadController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService)
+        public UploadController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
             _protectionService = protectionService;
+            _clientIPService = clientIPService;
         }
 
         [HttpPost("api/upload/{**folderPath}")]
         public async Task<IActionResult> UploadFile(string? folderPath, IFormFile? file, [FromQuery(Name = "token")] string? token = null)
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
-            _logger.LogInfo($"开始处理文件上传请求，客户端IP: {clientIP}，目标文件夹: {folderPath}，文件名: {file?.FileName}");
+            _logger.LogInfo(I18nService.Instance.T("upload.request", clientIP, folderPath, file?.FileName));
             
             try
             {
                 if (file == null || file.Length == 0)
                 {
-                    _logger.LogWarning($"上传文件为空，客户端IP: {clientIP}");
-                    return BadRequest("请选择要上传的文件");
+                    _logger.LogWarning(I18nService.Instance.T("upload.file_empty", clientIP));
+                    return BadRequest(I18nService.Instance.T("upload.select_file_prompt"));
                 }
                 
                 if (!string.IsNullOrEmpty(folderPath))
@@ -40,38 +42,38 @@ namespace Repository.Controllers
                     try
                     {
                         folderPath = Uri.UnescapeDataString(folderPath);
-                        _logger.LogInfo($"URL解码后文件夹路径: {folderPath}");
+                        _logger.LogInfo(I18nService.Instance.T("upload.url_decode_success", folderPath));
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning($"URL解码失败，使用原始路径: {folderPath}，错误: {ex.Message}");
+                        _logger.LogWarning(I18nService.Instance.T("upload.url_decode_failed", folderPath, ex.Message));
                     }
                 }
                 
                 if (!string.IsNullOrEmpty(folderPath) && ContainsIllegalCharacters(folderPath))
                 {
-                    _logger.LogWarning($"检测到非法字符的文件上传请求，客户端IP: {clientIP}，文件夹路径: {folderPath}");
-                    return BadRequest("文件夹路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("upload.illegal_chars_path", clientIP, folderPath));
+                    return BadRequest(I18nService.Instance.T("upload.path_invalid"));
                 }
                 
                 if (ContainsIllegalCharacters(file.FileName))
                 {
-                    _logger.LogWarning($"检测到非法字符的文件名，客户端IP: {clientIP}，文件名: {file.FileName}");
-                    return BadRequest("文件名不合法");
+                    _logger.LogWarning(I18nService.Instance.T("upload.illegal_chars_filename", clientIP, file.FileName));
+                    return BadRequest(I18nService.Instance.T("upload.filename_invalid"));
                 }
                 
                 var config = _configManager.GetConfig();
                 
                 if (!config.UploadEnabled)
                 {
-                    _logger.LogWarning($"文件上传功能已禁用，客户端IP: {clientIP}");
-                    return StatusCode(403, "上传功能已禁用");
+                    _logger.LogWarning(I18nService.Instance.T("upload.feature_disabled", clientIP));
+                    return StatusCode(403, I18nService.Instance.T("upload.feature_disabled_response"));
                 }
                 
                 if (!config.AllowRootUpload && (string.IsNullOrEmpty(folderPath) || folderPath.Trim('/') == ""))
                 {
-                    _logger.LogWarning($"尝试上传到根目录，客户端IP: {clientIP}");
-                    return BadRequest("不允许上传到根目录");
+                    _logger.LogWarning(I18nService.Instance.T("upload.root_upload_denied", clientIP));
+                    return BadRequest(I18nService.Instance.T("upload.root_upload_denied_response"));
                 }
                 
                 var repoPath = config.RepositoryPath;
@@ -79,22 +81,22 @@ namespace Repository.Controllers
 
                 if (!IsPathValid(repoPath, targetFolder))
                 {
-                    _logger.LogWarning($"安全警告！客户端IP: {clientIP}，尝试上传到仓库外的文件夹: {folderPath}");
-                    return BadRequest("文件夹路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("upload.outside_repo", clientIP, folderPath));
+                    return BadRequest(I18nService.Instance.T("upload.path_invalid"));
                 }
                 
                 if (ProtectionService.IsSystemPath(folderPath))
                 {
-                    _logger.LogWarning($"尝试上传到系统路径，客户端IP: {clientIP}，路径: {folderPath}");
-                    return NotFound("目录不存在");
+                    _logger.LogWarning(I18nService.Instance.T("upload.system_path", clientIP, folderPath));
+                    return NotFound(I18nService.Instance.T("upload.folder_not_found"));
                 }
                 
                 var relPath = GetRelativePath(repoPath, targetFolder);
                 
                 if (_protectionService.IsPathProtected(relPath) && !_protectionService.VerifyToken(relPath, token))
                 {
-                    _logger.LogWarning($"受保护目录上传被拒绝，客户端IP: {clientIP}，路径: {relPath}");
-                    return NotFound("目录不存在");
+                    _logger.LogWarning(I18nService.Instance.T("upload.protected_dir", clientIP, relPath));
+                    return NotFound(I18nService.Instance.T("upload.folder_not_found"));
                 }
                 
                 if (!Directory.Exists(targetFolder))
@@ -102,12 +104,12 @@ namespace Repository.Controllers
                     try
                     {
                         Directory.CreateDirectory(targetFolder);
-                        _logger.LogInfo($"创建目标文件夹: {targetFolder}");
+                        _logger.LogInfo(I18nService.Instance.T("upload.create_folder", targetFolder));
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"无法创建目标文件夹: {targetFolder}");
-                        return StatusCode(500, "无法创建目标文件夹");
+                        _logger.LogError(ex, I18nService.Instance.T("upload.folder_create_error", targetFolder));
+                        return StatusCode(500, I18nService.Instance.T("upload.folder_create_failed"));
                     }
                 }
                 
@@ -117,16 +119,16 @@ namespace Repository.Controllers
                 
                 if (_blacklistService.IsPathBlacklisted(fileRelPath))
                 {
-                    _logger.LogWarning($"文件上传被黑名单阻止，客户端IP: {clientIP}，文件路径: {fileRelPath}");
-                    return StatusCode(403, "文件路径不被允许");
+                    _logger.LogWarning(I18nService.Instance.T("upload.blacklist_blocked", clientIP, fileRelPath));
+                    return StatusCode(403, I18nService.Instance.T("upload.access_denied"));
                 }
                 
                 // 检查文件大小是否超过限制
                 var maxUploadSizeBytes = config.MaxUploadSizeMB * 1024 * 1024;
                 if (file.Length > maxUploadSizeBytes)
                 {
-                    _logger.LogWarning($"文件过大，拒绝上传，客户端IP: {clientIP}，文件名: {file.FileName} ({FormatFileSize(file.Length)})，限制: {FormatFileSize(maxUploadSizeBytes)}");
-                    return StatusCode(413, $"文件过大，最大允许 {FormatFileSize(maxUploadSizeBytes)}");
+                    _logger.LogWarning(I18nService.Instance.T("upload.file_too_large", clientIP, file.FileName, FormatFileSize(file.Length), FormatFileSize(maxUploadSizeBytes)));
+                    return StatusCode(413, I18nService.Instance.T("upload.file_too_large", clientIP, file.FileName, FormatFileSize(file.Length), FormatFileSize(maxUploadSizeBytes)));
                 }
                 
                 // 检查磁盘占用限制
@@ -141,8 +143,8 @@ namespace Repository.Controllers
                     
                     if (projectedUsagePercent > config.MaxDiskUsagePercent)
                     {
-                        _logger.LogWarning($"磁盘占用超限，拒绝上传，客户端IP: {clientIP}，文件名: {file.FileName}，当前占用: {currentUsagePercent:F1}%，上传后预计: {projectedUsagePercent:F1}%，限制: {config.MaxDiskUsagePercent}%");
-                        return StatusCode(507, $"磁盘占用超限，当前占用 {currentUsagePercent:F1}%，限制 {config.MaxDiskUsagePercent}%");
+                        _logger.LogWarning(I18nService.Instance.T("upload.disk_full", clientIP, file.FileName, currentUsagePercent, projectedUsagePercent, config.MaxDiskUsagePercent));
+                        return StatusCode(507, I18nService.Instance.T("upload.disk_full", clientIP, file.FileName, currentUsagePercent, projectedUsagePercent, config.MaxDiskUsagePercent));
                     }
                 }
                 
@@ -153,8 +155,8 @@ namespace Repository.Controllers
                     var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
                     if (!allowedExtensions.Contains(fileExtension))
                     {
-                        _logger.LogWarning($"文件类型不被允许，客户端IP: {clientIP}，文件名: {file.FileName}，扩展名: {fileExtension}");
-                        return StatusCode(403, $"不支持的文件类型: {fileExtension}");
+                        _logger.LogWarning(I18nService.Instance.T("upload.file_type_denied", clientIP, file.FileName, fileExtension));
+                        return StatusCode(403, I18nService.Instance.T("upload.file_type_denied", clientIP, file.FileName, fileExtension));
                     }
                 }
                 
@@ -164,20 +166,20 @@ namespace Repository.Controllers
                     // 如果配置不允许覆盖，返回错误
                     if (!config.AllowOverwrite)
                     {
-                        _logger.LogWarning($"文件已存在且不允许覆盖，客户端IP: {clientIP}，文件路径: {filePath}");
-                        return StatusCode(409, "文件已存在");
+                        _logger.LogWarning(I18nService.Instance.T("upload.file_exists", clientIP, filePath));
+                        return StatusCode(409, I18nService.Instance.T("upload.file_exists", clientIP, filePath));
                     }
                     
                     // 如果允许覆盖，先删除现有文件
                     try
                     {
                         System.IO.File.Delete(filePath);
-                        _logger.LogInfo($"删除现有文件: {filePath}");
+                        _logger.LogInfo(I18nService.Instance.T("upload.delete_existing", filePath));
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"无法删除现有文件: {filePath}");
-                        return StatusCode(500, "无法覆盖现有文件");
+                        _logger.LogError(ex, I18nService.Instance.T("upload.file_delete_error", filePath));
+                        return StatusCode(500, I18nService.Instance.T("upload.file_delete_error", filePath));
                     }
                 }
                 
@@ -187,11 +189,11 @@ namespace Repository.Controllers
                     await file.CopyToAsync(stream);
                 }
                 
-                _logger.LogInfo($"文件上传成功，客户端IP: {clientIP}，文件路径: {filePath} ({FormatFileSize(file.Length)})");
+                _logger.LogInfo(I18nService.Instance.T("upload.success", clientIP, filePath, FormatFileSize(file.Length)));
                 
                 // 返回成功信息
                 return Ok(new { 
-                    message = "文件上传成功",
+                    message = I18nService.Instance.T("upload.upload_success_message"),
                     fileName = file.FileName,
                     filePath = relPath,
                     fileSize = FormatFileSize(file.Length)
@@ -199,58 +201,23 @@ namespace Repository.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogError(ex, $"权限不足，无法上传文件到: {folderPath}");
-                return StatusCode(403, "没有访问权限");
+                _logger.LogError(ex, I18nService.Instance.T("upload.error_unauthorized", folderPath));
+                return StatusCode(403, I18nService.Instance.T("upload.access_denied"));
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, $"文件写入错误: {folderPath}");
-                return StatusCode(500, "文件写入失败");
+                _logger.LogError(ex, I18nService.Instance.T("upload.error_io", folderPath));
+                return StatusCode(500, I18nService.Instance.T("upload.server_error"));
             }
             catch (OutOfMemoryException ex)
             {
-                _logger.LogError(ex, $"内存不足，无法处理大文件: {file?.FileName}");
-                return StatusCode(500, "服务器内存不足");
+                _logger.LogError(ex, I18nService.Instance.T("upload.error_memory", file?.FileName));
+                return StatusCode(500, I18nService.Instance.T("upload.error_memory", file?.FileName));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"上传文件时发生未知错误: {file?.FileName}");
-                return StatusCode(500, "服务器内部错误");
-            }
-        }
-
-        /// <summary>
-        /// 获取客户端IP地址
-        /// </summary>
-        private string GetClientIP()
-        {
-            try
-            {
-                var httpContext = HttpContext;
-                
-                // 首先检查X-Forwarded-For头部（代理服务器）
-                var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(forwardedFor))
-                {
-                    // X-Forwarded-For可能包含多个IP，取第一个
-                    var ips = forwardedFor.Split(',').Select(ip => ip.Trim());
-                    return ips.FirstOrDefault() ?? "Unknown";
-                }
-                
-                // 检查X-Real-IP头部
-                var realIP = httpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(realIP))
-                {
-                    return realIP;
-                }
-                
-                // 最后使用RemoteIpAddress
-                return httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取客户端IP地址时发生错误");
-                return "Unknown";
+                _logger.LogError(ex, I18nService.Instance.T("upload.error_unknown", file?.FileName));
+                return StatusCode(500, I18nService.Instance.T("upload.server_error"));
             }
         }
 

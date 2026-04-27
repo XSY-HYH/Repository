@@ -13,32 +13,34 @@ namespace Repository.Controllers
         private readonly Logger _logger;
         private readonly BlacklistService _blacklistService;
         private readonly ProtectionService _protectionService;
+        private readonly ClientIPService _clientIPService;
 
-        public DirectoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService)
+        public DirectoryController(ConfigManager configManager, Logger logger, BlacklistService blacklistService, ProtectionService protectionService, ClientIPService clientIPService)
         {
             _configManager = configManager;
             _logger = logger;
             _blacklistService = blacklistService;
             _protectionService = protectionService;
+            _clientIPService = clientIPService;
         }
 
         [HttpGet("api/files")]
         public async Task<IActionResult> GetFiles([FromQuery(Name = "path")] string path = "", [FromQuery(Name = "token")] string? token = null, [FromQuery(Name = "session")] string? session = null)
         {
-            var clientIP = GetClientIP();
+            var clientIP = _clientIPService.GetClientIP(HttpContext);
             
             try
             {
                 if (Request.Query.ContainsKey("path[]") || Request.Query["path"].Count > 1)
                 {
-                    _logger.LogWarning($"检测到参数污染攻击，客户端IP: {clientIP}，查询字符串: {Request.QueryString}");
-                    return BadRequest("参数不合法");
+                    _logger.LogWarning(I18nService.Instance.T("directory.path_pollution", clientIP, Request.QueryString));
+                    return BadRequest(I18nService.Instance.T("directory.path_invalid"));
                 }
                 
                 if (!string.IsNullOrEmpty(path) && ContainsIllegalCharacters(path))
                 {
-                    _logger.LogWarning($"检测到非法字符的路径请求，客户端IP: {clientIP}，路径: {path}");
-                    return BadRequest("路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("directory.illegal_chars", clientIP, path));
+                    return BadRequest(I18nService.Instance.T("directory.path_invalid"));
                 }
                 
                 var repoPath = _configManager.GetConfig().RepositoryPath;
@@ -46,14 +48,14 @@ namespace Repository.Controllers
                 
                 if (!IsPathValid(repoPath, fullPath))
                 {
-                    _logger.LogWarning($"有人想搞事情！客户端IP: {clientIP}，尝试访问仓库外的路径: {path}");
-                    return BadRequest("路径不合法");
+                    _logger.LogWarning(I18nService.Instance.T("directory.outside_repo", clientIP, path));
+                    return BadRequest(I18nService.Instance.T("directory.path_invalid"));
                 }
 
                 if (ProtectionService.IsSystemPath(path))
                 {
-                    _logger.LogWarning($"尝试访问系统路径，客户端IP: {clientIP}，路径: {path}");
-                    return NotFound("目录不存在");
+                    _logger.LogWarning(I18nService.Instance.T("directory.system_path", clientIP, path));
+                    return NotFound(I18nService.Instance.T("directory.directory_not_found"));
                 }
 
                 if (_protectionService.IsPathProtected(path))
@@ -64,16 +66,16 @@ namespace Repository.Controllers
                     {
                         if (!_protectionService.VerifySession(path, session))
                         {
-                            _logger.LogWarning($"Secure保护目录访问被拒绝，客户端IP: {clientIP}，路径: {path}");
-                            return NotFound("目录不存在");
+                            _logger.LogWarning(I18nService.Instance.T("directory.secure_denied", clientIP, path));
+                            return NotFound(I18nService.Instance.T("directory.directory_not_found"));
                         }
                     }
                     else
                     {
                         if (!_protectionService.VerifyToken(path, token))
                         {
-                            _logger.LogWarning($"Token保护目录访问被拒绝，客户端IP: {clientIP}，路径: {path}");
-                            return NotFound("目录不存在");
+                            _logger.LogWarning(I18nService.Instance.T("directory.token_denied", clientIP, path));
+                            return NotFound(I18nService.Instance.T("directory.directory_not_found"));
                         }
                     }
                 }
@@ -81,8 +83,8 @@ namespace Repository.Controllers
                 bool dirExists = await Task.Run(() => Directory.Exists(fullPath));
                 if (!dirExists)
                 {
-                    _logger.LogWarning($"目录不存在，客户端IP: {clientIP}，路径: {fullPath}");
-                    return NotFound("目录不存在");
+                    _logger.LogWarning(I18nService.Instance.T("directory.not_exist", clientIP, fullPath));
+                    return NotFound(I18nService.Instance.T("directory.directory_not_found"));
                 }
 
                 var listing = new DirectoryListing { CurrentPath = path };
@@ -96,23 +98,23 @@ namespace Repository.Controllers
 
                 listing.DirectoryHash = await Task.Run(() => ComputeDirectoryHash(fullPath));
 
-                _logger.LogInfo($"成功返回目录列表，客户端IP: {clientIP}，路径: {path}");
+                _logger.LogInfo(I18nService.Instance.T("directory.success", clientIP, path));
                 return Ok(listing);
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogError(ex, $"权限不足，无法访问路径: {path}");
-                return StatusCode(403, "没有访问权限");
+                _logger.LogError(ex, I18nService.Instance.T("directory.error_unauthorized", path));
+                return StatusCode(403, I18nService.Instance.T("directory.access_denied"));
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, $"IO错误，路径: {path}");
-                return StatusCode(500, "文件系统错误");
+                _logger.LogError(ex, I18nService.Instance.T("directory.error_io", path));
+                return StatusCode(500, I18nService.Instance.T("directory.file_system_error"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"获取文件列表时出错: {path}");
-                return StatusCode(500, "服务器内部错误");
+                _logger.LogError(ex, I18nService.Instance.T("directory.error_unknown", path));
+                return StatusCode(500, I18nService.Instance.T("directory.server_error"));
             }
         }
 
@@ -247,35 +249,6 @@ namespace Repository.Controllers
                         CanPreview = isPreviewable
                     });
                 }
-            }
-        }
-
-        /// <summary>
-        /// 获取客户端IP地址
-        /// </summary>
-        private string GetClientIP()
-        {
-            try
-            {
-                var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(forwardedFor))
-                {
-                    var ips = forwardedFor.Split(',').Select(ip => ip.Trim());
-                    return ips.FirstOrDefault() ?? "Unknown";
-                }
-                
-                var realIP = HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(realIP))
-                {
-                    return realIP;
-                }
-                
-                return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取客户端IP地址时发生错误");
-                return "Unknown";
             }
         }
 

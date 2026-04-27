@@ -63,17 +63,49 @@ Blacklist (string, default: "")
     - Subdirectory match: %/node_modules
     - File reference: /path/to/blacklist.txt
 
-DDoSProtection (bool, default: true)
-    Enable DDoS protection with rate limiting.
-    启用 DDoS 防护和速率限制。
+RequestThrottling (bool, default: true)
+    Enable request throttling with rate limiting.
+    启用请求限速和速率限制。
 
-MaxRequestsPerMinute (int, default: 100)
-    Maximum requests per minute per IP before blocking.
-    每个 IP 每分钟最大请求数，超过则封禁。
+MaximumRequestsPerSecond (int, default: 50)
+    Maximum requests per second per IP. Exceeding this value results in
+    permanent ban (added to BlockedIPs list).
+    每个 IP 每秒最大请求数。超过此值将永久封禁（写入 BlockedIPs 列表）。
+
+AlarmRequestsPerSecond (int, default: 30)
+    Alarm threshold per second per IP. Reaching or exceeding this value
+    results in temporary ban (added to TemporarilyBlockedIPs list).
+    每个 IP 每秒告警请求值。达到或超过此值将临时封禁（写入 TemporarilyBlockedIPs 列表）。
+
+BlockedIPs (string, default: "")
+    Permanently blocked IPs, separated by comma. Auto-filled by system.
+    永久封禁的 IP，逗号分隔。由系统自动填充。
+
+TemporarilyBlockedIPs (string, default: "")
+    Temporarily blocked IPs, separated by comma. Auto-filled by system,
+    expired entries are automatically cleaned up on restart.
+    临时封禁的 IP，逗号分隔。由系统自动填充，重启时重新计时。
 
 BlockDurationMinutes (int, default: 30)
-    Block duration in minutes for rate-limited IPs.
-    速率限制 IP 的封禁时长（分钟）。
+    Ban duration in minutes for temporarily blocked IPs.
+    临时封禁 IP 的封禁时长（分钟）。
+
+RequestHeaderFiltering (bool, default: false)
+    Enable request header filtering. Rejects requests missing basic browser
+    headers (User-Agent, Accept) without returning any data.
+    启用请求头过滤。拒绝缺少基本浏览器请求头的请求，不返回任何数据。
+
+RequireUserAgent (bool, default: true)
+    Require User-Agent header when RequestHeaderFiltering is enabled.
+    启用请求头过滤时要求 User-Agent 请求头。
+
+RequireAccept (bool, default: true)
+    Require Accept header when RequestHeaderFiltering is enabled.
+    启用请求头过滤时要求 Accept 请求头。
+
+AllowedBrowsers (string, default: "Chrome,Firefox,Safari,Edg,Opera,OPR,MSIE,Trident")
+    Allowed browser identifiers in User-Agent, separated by comma.
+    User-Agent 中允许的浏览器标识符，逗号分隔。
 
 ================================================================================
                         UPLOAD CONFIGURATION / 上传配置
@@ -178,6 +210,15 @@ HttpsRedirectEnabled (bool, default: false)
 HttpEnabled (bool, default: true)
     Enable HTTP server.
     启用 HTTP 服务器。
+
+ProxyProtocolEnabled (bool, default: false)
+    Enable PROXY Protocol support. When enabled, server parses PROXY Protocol
+    header sent by reverse proxy (like frp) to get real client IP address.
+    Supports both v1 (text) and v2 (binary) formats. Affects all filtering
+    services (request throttling, circuit breaker, request header filtering).
+    启用 PROXY Protocol 支持。启用后服务器解析反向代理（如 frp）发送的
+    PROXY Protocol 头以获取真实客户端 IP 地址。支持 v1（文本）和 v2（二进制）
+    格式。对所有过滤服务生效（请求限速、熔断、请求头过滤）。
 
 Domain (string, default: "")
     Server domain for auto-generated certificate.
