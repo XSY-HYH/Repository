@@ -243,6 +243,10 @@ en:
     operation_success: Operation successful
     json_parse_error: Data format error
     json_parse_error_log: 'CHAP operation failed: JSON parse error'
+    session_mismatch: Session ID mismatch
+    recovery_ack_log: 'CHAP-IEM recovery acknowledgment received, client IP: {0}'
+    resync_success: ID chain resynchronized successfully
+    recovery_sent_log: 'CHAP-IEM recovery packet sent, client IP: {0}'
   cert:
     found: 'Found existing self-signed certificate: {0}, {1}'
     generating: 'Generating self-signed certificate, domain: {0}'
@@ -541,6 +545,10 @@ zh:
     operation_success: 操作成功
     json_parse_error: 数据格式错误
     json_parse_error_log: CHAP操作失败：JSON解析错误
+    session_mismatch: 会话ID不匹配
+    recovery_ack_log: 'CHAP-IEM恢复确认已接收，客户端IP: {0}'
+    resync_success: ID链已重新同步
+    recovery_sent_log: 'CHAP-IEM恢复包已发送，客户端IP: {0}'
   cert:
     found: '发现已存在的自签名证书: {0}, {1}'
     generating: '正在生成自签名证书，域名: {0}'

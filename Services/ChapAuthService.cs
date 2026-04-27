@@ -20,6 +20,7 @@ namespace Repository.Services
         public string Message { get; set; } = "";
         public string? NewId { get; set; }
         public object? Data { get; set; }
+        public bool IsRecovery { get; set; }
     }
 
     public class ChapAuthService
@@ -27,13 +28,19 @@ namespace Repository.Services
         private readonly ConfigManager _configManager;
         private readonly Logger _logger;
         private readonly ConcurrentDictionary<string, ChapSession> _sessions = new();
-        private readonly ConcurrentDictionary<string, string> _sessionIdToKey = new();
+        private readonly ConcurrentDictionary<string, byte[]> _sessionCurrentKeys = new();
         private readonly RandomNumberGenerator _rng = RandomNumberGenerator.Create();
 
         public ChapAuthService(ConfigManager configManager, Logger logger)
         {
             _configManager = configManager;
             _logger = logger;
+        }
+
+        private byte[] GetK()
+        {
+            var config = _configManager.GetConfig();
+            return GetKeyFromPassword(config.AdminPassword ?? "");
         }
 
         public byte[] GetKeyFromPassword(string password)
@@ -87,14 +94,21 @@ namespace Repository.Services
             }
         }
 
-        public string GenerateSessionId()
+        public string GenerateId()
         {
-            var bytes = new byte[16];
+            var bytes = new byte[32];
             _rng.GetBytes(bytes);
-            return Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
+            return Convert.ToBase64String(bytes);
         }
 
-        public (bool success, ChapResponse response, byte[]? key) HandleLogin(byte[] encryptedData, string clientIP)
+        public byte[] GenerateIdBytes()
+        {
+            var bytes = new byte[32];
+            _rng.GetBytes(bytes);
+            return bytes;
+        }
+
+        public (bool success, ChapResponse response, byte[]? encryptKey) HandleLogin(byte[] encryptedData, string clientIP)
         {
             var config = _configManager.GetConfig();
 
@@ -108,8 +122,8 @@ namespace Repository.Services
                 return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.password_not_configured") }, null);
             }
 
-            var key = GetKeyFromPassword(config.AdminPassword);
-            var decrypted = Decrypt(key, encryptedData);
+            var k = GetK();
+            var decrypted = Decrypt(k, encryptedData);
 
             if (decrypted == null)
             {
@@ -125,7 +139,10 @@ namespace Repository.Services
                 return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.auth_failed") }, null);
             }
 
+            var id1 = GenerateId();
+            var id1Bytes = GenerateIdBytes();
             var sessionId = GenerateSessionId();
+
             var session = new ChapSession
             {
                 SessionId = sessionId,
@@ -135,7 +152,7 @@ namespace Repository.Services
             };
 
             _sessions[sessionId] = session;
-            _sessionIdToKey[sessionId] = config.AdminPassword;
+            _sessionCurrentKeys[sessionId] = id1Bytes;
 
             _logger.LogInfo(I18nService.Instance.T("chap.login_success_log", clientIP, sessionId));
 
@@ -143,11 +160,11 @@ namespace Repository.Services
             {
                 Success = true,
                 Message = I18nService.Instance.T("chap.login_success"),
-                NewId = sessionId
-            }, key);
+                NewId = id1
+            }, k);
         }
 
-        public (bool success, ChapResponse response, byte[]? key) HandleOperation(byte[] encryptedData, string clientIP)
+        public (bool success, ChapResponse response, byte[]? encryptKey) HandleOperation(byte[] encryptedData, string clientIP)
         {
             var config = _configManager.GetConfig();
 
@@ -156,79 +173,114 @@ namespace Repository.Services
                 return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.admin_disabled") }, null);
             }
 
-            if (string.IsNullOrEmpty(config.AdminPassword))
+            string? matchedSessionId = null;
+            string? decryptedPlaintext = null;
+            byte[]? oldKey = null;
+
+            foreach (var kvp in _sessionCurrentKeys)
             {
-                return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.password_not_configured") }, null);
+                var plaintext = Decrypt(kvp.Value, encryptedData);
+                if (plaintext != null)
+                {
+                    matchedSessionId = kvp.Key;
+                    decryptedPlaintext = plaintext;
+                    oldKey = kvp.Value;
+                    break;
+                }
             }
 
-            var key = GetKeyFromPassword(config.AdminPassword);
-            var decrypted = Decrypt(key, encryptedData);
-
-            if (decrypted == null)
+            if (decryptedPlaintext == null || matchedSessionId == null)
             {
+                var k = GetK();
+                var recoveryPlaintext = Decrypt(k, encryptedData);
+
+                if (recoveryPlaintext != null)
+                {
+                    _logger.LogInfo(I18nService.Instance.T("chap.recovery_ack_log", clientIP));
+                    var latestSession = _sessions.OrderByDescending(s => s.Value.LastActivity).FirstOrDefault();
+                    if (latestSession.Value != null && _sessionCurrentKeys.TryGetValue(latestSession.Key, out var currentKey))
+                    {
+                        var currentIdBase64 = Convert.ToBase64String(currentKey);
+                        return (true, new ChapResponse
+                        {
+                            Success = true,
+                            Message = I18nService.Instance.T("chap.resync_success"),
+                            NewId = currentIdBase64,
+                            IsRecovery = true
+                        }, k);
+                    }
+                }
+
                 _logger.LogWarning(I18nService.Instance.T("chap.operation_decrypt_failed_log", clientIP));
                 return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.decrypt_failed") }, null);
             }
 
+            if (!_sessions.TryGetValue(matchedSessionId, out var session))
+            {
+                return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.session_expired") }, null);
+            }
+
+            if (session.ClientIP != clientIP)
+            {
+                _logger.LogWarning(I18nService.Instance.T("chap.ip_mismatch_log", clientIP, session.ClientIP));
+                return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.ip_mismatch") }, oldKey);
+            }
+
             try
             {
-                var operation = JsonSerializer.Deserialize<ChapOperation>(decrypted);
+                var operation = JsonSerializer.Deserialize<ChapOperation>(decryptedPlaintext);
                 if (operation == null || string.IsNullOrEmpty(operation.SessionId))
                 {
-                    return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.invalid_request") }, null);
+                    return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.invalid_request") }, oldKey);
                 }
 
-                if (!_sessions.TryGetValue(operation.SessionId, out var session))
+                if (operation.SessionId != matchedSessionId)
                 {
-                    var currentValidId = _sessions.Keys.FirstOrDefault();
-                    if (currentValidId != null)
-                    {
-                        return (false, new ChapResponse
-                        {
-                            Success = false,
-                            Message = I18nService.Instance.T("chap.session_sync_required"),
-                            NewId = currentValidId
-                        }, null);
-                    }
-
-                    return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.session_expired") }, null);
+                    return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.session_mismatch") }, oldKey);
                 }
 
-                if (session.ClientIP != clientIP)
-                {
-                    _logger.LogWarning(I18nService.Instance.T("chap.ip_mismatch_log", clientIP, session.ClientIP));
-                    return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.ip_mismatch") }, null);
-                }
+                var nextId = GenerateId();
+                var nextIdBytes = GenerateIdBytes();
 
-                _sessions.TryRemove(operation.SessionId, out _);
-
-                var newSessionId = GenerateSessionId();
-                var newSession = new ChapSession
-                {
-                    SessionId = newSessionId,
-                    ClientIP = clientIP,
-                    CreatedAt = session.CreatedAt,
-                    LastActivity = DateTime.UtcNow
-                };
-
-                _sessions[newSessionId] = newSession;
-
-                session = newSession;
                 session.LastActivity = DateTime.UtcNow;
+                _sessionCurrentKeys[matchedSessionId] = nextIdBytes;
 
                 return (true, new ChapResponse
                 {
                     Success = true,
                     Message = I18nService.Instance.T("chap.operation_success"),
-                    NewId = newSessionId,
+                    NewId = nextId,
                     Data = operation
-                }, key);
+                }, oldKey);
             }
             catch (JsonException ex)
             {
                 _logger.LogError(ex, I18nService.Instance.T("chap.json_parse_error_log"));
-                return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.json_parse_error") }, null);
+                return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.json_parse_error") }, oldKey);
             }
+        }
+
+        public (bool success, ChapResponse response, byte[]? encryptKey) HandleRecoveryRequest(string clientIP)
+        {
+            var k = GetK();
+            var latestSession = _sessions.OrderByDescending(s => s.Value.LastActivity).FirstOrDefault();
+
+            if (latestSession.Value == null || !_sessionCurrentKeys.TryGetValue(latestSession.Key, out var currentKey))
+            {
+                return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.session_expired") }, null);
+            }
+
+            var currentIdBase64 = Convert.ToBase64String(currentKey);
+
+            _logger.LogInfo(I18nService.Instance.T("chap.recovery_sent_log", clientIP));
+
+            return (true, new ChapResponse
+            {
+                Success = true,
+                Message = I18nService.Instance.T("chap.resync_success"),
+                NewId = currentIdBase64,
+                IsRecovery = true
+            }, k);
         }
 
         public bool ValidateSession(string sessionId, string clientIP)
@@ -246,6 +298,7 @@ namespace Repository.Services
             if (DateTime.UtcNow - session.LastActivity > TimeSpan.FromHours(1))
             {
                 _sessions.TryRemove(sessionId, out _);
+                _sessionCurrentKeys.TryRemove(sessionId, out _);
                 return false;
             }
 
@@ -256,6 +309,7 @@ namespace Repository.Services
         public void RemoveSession(string sessionId)
         {
             _sessions.TryRemove(sessionId, out _);
+            _sessionCurrentKeys.TryRemove(sessionId, out _);
         }
 
         public void CleanupExpiredSessions()
@@ -268,7 +322,15 @@ namespace Repository.Services
             foreach (var sessionId in expiredSessions)
             {
                 _sessions.TryRemove(sessionId, out _);
+                _sessionCurrentKeys.TryRemove(sessionId, out _);
             }
+        }
+
+        private string GenerateSessionId()
+        {
+            var bytes = new byte[16];
+            _rng.GetBytes(bytes);
+            return Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
         }
     }
 

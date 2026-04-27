@@ -1,6 +1,7 @@
 let ws = null;
 let sessionId = null;
-let key = null;
+let k = null;
+let currentKey = null;
 let currentPath = '';
 let moveTargetPath = null;
 let moveTargetType = null;
@@ -9,6 +10,15 @@ async function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     return new Uint8Array(hashBuffer);
+}
+
+function base64ToBytes(base64) {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
 }
 
 async function importKey(keyBytes) {
@@ -64,7 +74,7 @@ async function login() {
     loginBtn.textContent = '连接中...';
 
     try {
-        key = await sha256(password);
+        k = await sha256(password);
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = protocol + '//' + window.location.host + '/admin/ws';
@@ -73,17 +83,17 @@ async function login() {
         ws.binaryType = 'arraybuffer';
 
         ws.onopen = async () => {
-            const encrypted = await encrypt(key, username);
+            const encrypted = await encrypt(k, username);
             ws.send(encrypted);
         };
 
         ws.onmessage = async (event) => {
             try {
                 const ciphertext = new Uint8Array(event.data);
-                
+
                 let plaintext;
                 try {
-                    plaintext = await decrypt(key, ciphertext);
+                    plaintext = await decrypt(k, ciphertext);
                 } catch (decryptError) {
                     console.error('解密失败:', decryptError);
                     errorDiv.textContent = '解密失败: ' + decryptError.message;
@@ -91,7 +101,7 @@ async function login() {
                     loginBtn.textContent = '登录';
                     return;
                 }
-                
+
                 let response;
                 try {
                     response = JSON.parse(plaintext);
@@ -105,6 +115,7 @@ async function login() {
 
                 if (response.Success) {
                     sessionId = response.NewId;
+                    currentKey = base64ToBytes(response.NewId);
                     ws.onmessage = null;
                     document.getElementById('loginContainer').style.display = 'none';
                     document.getElementById('adminContainer').style.display = 'block';
@@ -161,9 +172,9 @@ async function sendOperation(action, path, newPath, settings) {
         const handler = async (event) => {
             try {
                 const ciphertext = new Uint8Array(event.data);
-                const plaintext = await decrypt(key, ciphertext);
+                const plaintext = await decrypt(currentKey, ciphertext);
                 const response = JSON.parse(plaintext);
-                
+
                 if (response.Type === 'server_notification') {
                     alert('服务器通知: ' + response.Message);
                     ws.close();
@@ -174,11 +185,12 @@ async function sendOperation(action, path, newPath, settings) {
                     reject(new Error('服务器已关闭'));
                     return;
                 }
-                
+
                 ws.removeEventListener('message', handler);
 
                 if (response.NewId) {
                     sessionId = response.NewId;
+                    currentKey = base64ToBytes(response.NewId);
                 }
 
                 resolve(response);
@@ -190,7 +202,7 @@ async function sendOperation(action, path, newPath, settings) {
 
         ws.addEventListener('message', handler);
 
-        encrypt(key, JSON.stringify(operation)).then(encrypted => {
+        encrypt(currentKey, JSON.stringify(operation)).then(encrypted => {
             ws.send(encrypted);
         }).catch(reject);
     });
@@ -407,7 +419,8 @@ function logout() {
     }
     ws = null;
     sessionId = null;
-    key = null;
+    k = null;
+    currentKey = null;
     currentPath = '';
     document.getElementById('adminContainer').style.display = 'none';
     document.getElementById('loginContainer').style.display = 'block';

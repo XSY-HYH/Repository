@@ -157,21 +157,21 @@ namespace Repository.Controllers
 
                         if (sessionKey == null)
                         {
-                            var (success, response, key) = _chapAuthService.HandleLogin(data, clientIP);
-                            if (success && key != null)
+                            var (success, response, encryptKey) = _chapAuthService.HandleLogin(data, clientIP);
+                            if (success && response.NewId != null)
                             {
-                                sessionKey = key;
+                                sessionKey = Convert.FromBase64String(response.NewId);
                                 sessionId = response.NewId;
                                 connectionId = _connectionManager.RegisterConnection(webSocket, sessionKey);
                             }
-                            await SendResponse(webSocket, sessionKey ?? _chapAuthService.GetKeyFromPassword("invalid"), response);
+                            await SendResponse(webSocket, encryptKey ?? _chapAuthService.GetKeyFromPassword("invalid"), response);
                         }
                         else
                         {
-                            var (success, response, key) = _chapAuthService.HandleOperation(data, clientIP);
-                            if (success && key != null)
+                            var (success, response, encryptKey) = _chapAuthService.HandleOperation(data, clientIP);
+                            if (success && response.NewId != null)
                             {
-                                sessionKey = key;
+                                sessionKey = Convert.FromBase64String(response.NewId);
                                 if (connectionId != null)
                                 {
                                     _connectionManager.UpdateSessionKey(connectionId, sessionKey);
@@ -183,7 +183,7 @@ namespace Repository.Controllers
                                 response.Message = operationResult.Message;
                                 response.Data = operationResult.Data;
                             }
-                            await SendResponse(webSocket, sessionKey!, response);
+                            await SendResponse(webSocket, encryptKey ?? sessionKey!, response);
                         }
                     }
                     catch (WebSocketException)
