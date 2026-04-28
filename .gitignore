@@ -26,6 +26,8 @@ publish/
 # Configuration files with sensitive data
 Config.json
 Config.yml
+*.log
+error.log
 # Data files
 data
 ip_blacklist.txt
