@@ -181,6 +181,7 @@ async function sendOperation(action, path, newPath, settings) {
                 const response = JSON.parse(plaintext);
 
                 if (response.NewId) {
+                }
 
                 if (response.Type === 'server_notification') {
                     alert('服务器通知: ' + response.Message);
