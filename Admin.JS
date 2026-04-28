@@ -172,8 +172,15 @@ async function sendOperation(action, path, newPath, settings) {
         const handler = async (event) => {
             try {
                 const ciphertext = new Uint8Array(event.data);
-                const plaintext = await decrypt(currentKey, ciphertext);
+                let plaintext;
+                try {
+                    plaintext = await decrypt(currentKey, ciphertext);
+                } catch (decryptErr) {
+                    throw decryptErr;
+                }
                 const response = JSON.parse(plaintext);
+
+                if (response.NewId) {
 
                 if (response.Type === 'server_notification') {
                     alert('服务器通知: ' + response.Message);
@@ -484,94 +491,9 @@ async function loadSettings() {
     try {
         const response = await sendOperation('get_settings', null, null);
 
-        if (response.Success && response.Data) {
-            const settings = response.Data.settings;
-            const rateLimitStatus = response.Data.rateLimitStatus;
-
-            let html = '<div style="display: grid; gap: 15px;">';
-            
-            html += '<fieldset style="border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">';
-            html += '<legend style="font-weight: bold; padding: 0 10px;">请求限速</legend>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="RequestThrottling" ' + (settings.RequestThrottling ? 'checked' : '') + '>';
-            html += '<span>启用请求限速</span></label>';
-            html += '<div style="margin-bottom: 10px;"><label>每秒最大请求值: </label>';
-            html += '<input type="number" id="MaximumRequestsPerSecond" value="' + settings.MaximumRequestsPerSecond + '" style="width: 100px; padding: 5px;"></div>';
-            html += '<div style="margin-bottom: 10px;"><label>每秒告警请求值: </label>';
-            html += '<input type="number" id="AlarmRequestsPerSecond" value="' + settings.AlarmRequestsPerSecond + '" style="width: 100px; padding: 5px;"></div>';
-            html += '<div style="margin-bottom: 10px;"><label>封禁时长(分钟): </label>';
-            html += '<input type="number" id="BlockDurationMinutes" value="' + settings.BlockDurationMinutes + '" style="width: 100px; padding: 5px;"></div>';
-            html += '<div style="margin-bottom: 10px;"><label>已封禁的IP: </label>';
-            html += '<input type="text" id="BlockedIPs" value="' + settings.BlockedIPs + '" style="width: 200px; padding: 5px;"></div>';
-            html += '<div><label>临时封禁的IP: </label>';
-            html += '<input type="text" id="TemporarilyBlockedIPs" value="' + settings.TemporarilyBlockedIPs + '" style="width: 200px; padding: 5px;"></div>';
-            html += '</fieldset>';
-
-            html += '<fieldset style="border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">';
-            html += '<legend style="font-weight: bold; padding: 0 10px;">文件上传</legend>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="UploadEnabled" ' + (settings.UploadEnabled ? 'checked' : '') + '>';
-            html += '<span>启用文件上传</span></label>';
-            html += '<div style="margin-bottom: 10px;"><label>最大上传大小(MB): </label>';
-            html += '<input type="number" id="MaxUploadSizeMB" value="' + settings.MaxUploadSizeMB + '" style="width: 100px; padding: 5px;"></div>';
-            html += '<div style="margin-bottom: 10px;"><label>最大磁盘占用(%): </label>';
-            html += '<input type="number" id="MaxDiskUsagePercent" value="' + settings.MaxDiskUsagePercent + '" style="width: 100px; padding: 5px;"></div>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="AllowOverwrite" ' + (settings.AllowOverwrite ? 'checked' : '') + '>';
-            html += '<span>允许覆盖文件</span></label>';
-            html += '<label style="display: flex; align-items: center; gap: 10px;">';
-            html += '<input type="checkbox" id="AllowRootUpload" ' + (settings.AllowRootUpload ? 'checked' : '') + '>';
-            html += '<span>允许根目录上传</span></label>';
-            html += '</fieldset>';
-
-            html += '<fieldset style="border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">';
-            html += '<legend style="font-weight: bold; padding: 0 10px;">文件预览与下载</legend>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="PreviewEnabled" ' + (settings.PreviewEnabled ? 'checked' : '') + '>';
-            html += '<span>启用文件预览</span></label>';
-            html += '<div><label>最大下载大小(MB): </label>';
-            html += '<input type="number" id="MaxDownloadSizeMB" value="' + settings.MaxDownloadSizeMB + '" style="width: 100px; padding: 5px;"></div>';
-            html += '</fieldset>';
-
-            html += '<fieldset style="border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">';
-            html += '<legend style="font-weight: bold; padding: 0 10px;">网络设置</legend>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="HttpEnabled" ' + (settings.HttpEnabled ? 'checked' : '') + '>';
-            html += '<span>启用 HTTP</span></label>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="HttpsEnabled" ' + (settings.HttpsEnabled ? 'checked' : '') + '>';
-            html += '<span>启用 HTTPS</span></label>';
-            html += '<label style="display: flex; align-items: center; gap: 10px;">';
-            html += '<input type="checkbox" id="HttpsRedirectEnabled" ' + (settings.HttpsRedirectEnabled ? 'checked' : '') + '>';
-            html += '<span>启用 HTTPS 重定向</span></label>';
-            html += '</fieldset>';
-
-            html += '<fieldset style="border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">';
-            html += '<legend style="font-weight: bold; padding: 0 10px;">系统设置</legend>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="Notification" ' + (settings.Notification ? 'checked' : '') + '>';
-            html += '<span>启用系统通知(Windows)</span></label>';
-            html += '<label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">';
-            html += '<input type="checkbox" id="AutoRestart" ' + (settings.AutoRestart ? 'checked' : '') + '>';
-            html += '<span>启用自动重启</span></label>';
-            html += '<div><label>最大重启次数: </label>';
-            html += '<input type="number" id="MaxRestartAttempts" value="' + settings.MaxRestartAttempts + '" style="width: 100px; padding: 5px;"></div>';
-            html += '</fieldset>';
-
-            html += '</div>';
-            content.innerHTML = html;
-
-            const rateLimitStatusDiv = document.getElementById('rateLimitStatus');
-            const rateLimitInfo = document.getElementById('rateLimitInfo');
-            const forceResumeBtn = document.getElementById('forceResumeBtn');
-
-            if (settings.RequestThrottling) {
-                rateLimitStatusDiv.style.display = 'block';
-                rateLimitInfo.innerHTML = '<span style="color: #28a745;">✓ 请求限速已启用</span><br>最大请求: ' + rateLimitStatus.MaximumRequestsPerSecond + ' 次/秒, 告警阈值: ' + rateLimitStatus.AlarmRequestsPerSecond + ' 次/秒';
-                forceResumeBtn.style.display = 'none';
-            } else {
-                rateLimitStatusDiv.style.display = 'none';
-            }
+        if (response.Success && response.Data && response.Data.content) {
+            const rawContent = response.Data.content;
+            content.innerHTML = '<textarea id="configEditor" style="width:100%;height:500px;font-family:Consolas,Monaco,monospace;font-size:13px;padding:10px;border:1px solid #dee2e6;border-radius:4px;resize:vertical;white-space:pre;tab-size:2;">' + rawContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea>';
         } else {
             content.innerHTML = '<p style="color: #dc3545;">加载设置失败: ' + (response.Message || '未知错误') + '</p>';
         }
@@ -581,30 +503,13 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
-    const settings = {
-        RequestThrottling: document.getElementById('RequestThrottling').checked,
-        MaximumRequestsPerSecond: parseInt(document.getElementById('MaximumRequestsPerSecond').value) || 50,
-        AlarmRequestsPerSecond: parseInt(document.getElementById('AlarmRequestsPerSecond').value) || 30,
-        BlockedIPs: document.getElementById('BlockedIPs').value,
-        TemporarilyBlockedIPs: document.getElementById('TemporarilyBlockedIPs').value,
-        BlockDurationMinutes: parseInt(document.getElementById('BlockDurationMinutes').value) || 30,
-        UploadEnabled: document.getElementById('UploadEnabled').checked,
-        MaxUploadSizeMB: parseInt(document.getElementById('MaxUploadSizeMB').value) || 100,
-        MaxDiskUsagePercent: parseInt(document.getElementById('MaxDiskUsagePercent').value) || 0,
-        AllowOverwrite: document.getElementById('AllowOverwrite').checked,
-        AllowRootUpload: document.getElementById('AllowRootUpload').checked,
-        PreviewEnabled: document.getElementById('PreviewEnabled').checked,
-        MaxDownloadSizeMB: parseInt(document.getElementById('MaxDownloadSizeMB').value) || 100,
-        HttpEnabled: document.getElementById('HttpEnabled').checked,
-        HttpsEnabled: document.getElementById('HttpsEnabled').checked,
-        HttpsRedirectEnabled: document.getElementById('HttpsRedirectEnabled').checked,
-        Notification: document.getElementById('Notification').checked,
-        AutoRestart: document.getElementById('AutoRestart').checked,
-        MaxRestartAttempts: parseInt(document.getElementById('MaxRestartAttempts').value) || 3
-    };
+    const editor = document.getElementById('configEditor');
+    if (!editor) return;
+
+    if (!confirm('确定要保存配置文件吗？错误的配置可能导致服务异常。')) return;
 
     try {
-        const response = await sendOperation('update_settings', null, null, settings);
+        const response = await sendOperation('update_settings', null, null, { content: editor.value });
         if (response.Success) {
             alert('设置已保存: ' + response.Message);
             loadSettings();

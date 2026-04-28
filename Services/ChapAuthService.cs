@@ -139,8 +139,8 @@ namespace Repository.Services
                 return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.auth_failed") }, null);
             }
 
-            var id1 = GenerateId();
             var id1Bytes = GenerateIdBytes();
+            var id1 = Convert.ToBase64String(id1Bytes);
             var sessionId = GenerateSessionId();
 
             var session = new ChapSession
@@ -234,13 +234,8 @@ namespace Repository.Services
                     return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.invalid_request") }, oldKey);
                 }
 
-                if (operation.SessionId != matchedSessionId)
-                {
-                    return (false, new ChapResponse { Success = false, Message = I18nService.Instance.T("chap.session_mismatch") }, oldKey);
-                }
-
-                var nextId = GenerateId();
                 var nextIdBytes = GenerateIdBytes();
+                var nextId = Convert.ToBase64String(nextIdBytes);
 
                 session.LastActivity = DateTime.UtcNow;
                 _sessionCurrentKeys[matchedSessionId] = nextIdBytes;

@@ -736,207 +736,35 @@ namespace Repository.Controllers
         {
             _logger.LogInfo(I18nService.Instance.T("admin.settings_requested", clientIP));
 
-            var config = _configManager.GetConfig();
+            var configPath = "Config.yml";
+            if (!System.IO.File.Exists(configPath))
+                return (I18nService.Instance.T("admin.config_not_found"), null);
 
-            return (I18nService.Instance.T("admin.settings_get_success"), new
-            {
-                settings = new
-                {
-                    RequestThrottling = config.RequestThrottling,
-                    MaximumRequestsPerSecond = config.MaximumRequestsPerSecond,
-                    AlarmRequestsPerSecond = config.AlarmRequestsPerSecond,
-                    BlockDurationMinutes = config.BlockDurationMinutes,
-                    IPBlocking = config.IPBlocking,
-                    UploadEnabled = config.UploadEnabled,
-                    MaxUploadSizeMB = config.MaxUploadSizeMB,
-                    MaxDiskUsagePercent = config.MaxDiskUsagePercent,
-                    AllowOverwrite = config.AllowOverwrite,
-                    AllowRootUpload = config.AllowRootUpload,
-                    PreviewEnabled = config.PreviewEnabled,
-                    MaxDownloadSizeMB = config.MaxDownloadSizeMB,
-                    HttpEnabled = config.HttpEnabled,
-                    HttpsEnabled = config.HttpsEnabled,
-                    HttpsRedirectEnabled = config.HttpsRedirectEnabled,
-                    Notification = config.Notification,
-                    AutoRestart = config.AutoRestart,
-                    MaxRestartAttempts = config.MaxRestartAttempts
-                }
-            });
+            var rawContent = await System.IO.File.ReadAllTextAsync(configPath);
+            return (I18nService.Instance.T("admin.settings_get_success"), new { content = rawContent });
         }
 
         private async Task<(string Message, object? Data)> UpdateServerSettings(Dictionary<string, object?>? settings, string clientIP)
         {
-            if (settings == null || settings.Count == 0)
-            {
+            if (settings == null || !settings.ContainsKey("content") || settings["content"] == null)
                 return (I18nService.Instance.T("admin.settings_empty"), null);
-            }
 
             _logger.LogInfo(I18nService.Instance.T("admin.settings_update_log", clientIP));
 
             try
             {
-                var config = _configManager.GetConfig();
-                var updatedFields = new List<string>();
+                var rawContent = settings["content"]?.ToString() ?? "";
+                var configPath = "Config.yml";
 
-                foreach (var kvp in settings)
-                {
-                    switch (kvp.Key)
-                    {
-                        case "RequestThrottling":
-                            if (kvp.Value is bool throttlingValue)
-                            {
-                                config.RequestThrottling = throttlingValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_throttling"));
-                            }
-                            break;
+                await System.IO.File.WriteAllTextAsync(configPath, rawContent);
+                _logger.LogInfo(I18nService.Instance.T("admin.settings_updated_log", "Config.yml"));
 
-                        case "MaximumRequestsPerSecond":
-                            if (int.TryParse(kvp.Value?.ToString(), out var maxReq))
-                            {
-                                config.MaximumRequestsPerSecond = maxReq;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_max_requests"));
-                            }
-                            break;
-
-                        case "AlarmRequestsPerSecond":
-                            if (int.TryParse(kvp.Value?.ToString(), out var alarmReq))
-                            {
-                                config.AlarmRequestsPerSecond = alarmReq;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_alarm_requests"));
-                            }
-                            break;
-
-                        case "BlockDurationMinutes":
-                            if (int.TryParse(kvp.Value?.ToString(), out var blockDur))
-                            {
-                                config.BlockDurationMinutes = blockDur;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_block_duration"));
-                            }
-                            break;
-
-                        case "IPBlocking":
-                            if (kvp.Value is bool ipBlockingValue)
-                            {
-                                config.IPBlocking = ipBlockingValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_ip_blocking"));
-                            }
-                            break;
-
-                        case "UploadEnabled":
-                            if (kvp.Value is bool uploadValue)
-                            {
-                                config.UploadEnabled = uploadValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_upload"));
-                            }
-                            break;
-
-                        case "MaxUploadSizeMB":
-                            if (int.TryParse(kvp.Value?.ToString(), out var maxSize))
-                            {
-                                config.MaxUploadSizeMB = maxSize;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_max_upload_size"));
-                            }
-                            break;
-
-                        case "MaxDiskUsagePercent":
-                            if (int.TryParse(kvp.Value?.ToString(), out var diskPercent))
-                            {
-                                config.MaxDiskUsagePercent = diskPercent;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_max_disk_usage"));
-                            }
-                            break;
-
-                        case "AllowOverwrite":
-                            if (kvp.Value is bool overwriteValue)
-                            {
-                                config.AllowOverwrite = overwriteValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_allow_overwrite"));
-                            }
-                            break;
-
-                        case "AllowRootUpload":
-                            if (kvp.Value is bool rootUploadValue)
-                            {
-                                config.AllowRootUpload = rootUploadValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_allow_root_upload"));
-                            }
-                            break;
-
-                        case "PreviewEnabled":
-                            if (kvp.Value is bool previewValue)
-                            {
-                                config.PreviewEnabled = previewValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_preview"));
-                            }
-                            break;
-
-                        case "MaxDownloadSizeMB":
-                            if (int.TryParse(kvp.Value?.ToString(), out var maxDownload))
-                            {
-                                config.MaxDownloadSizeMB = maxDownload;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_max_download_size"));
-                            }
-                            break;
-
-                        case "HttpEnabled":
-                            if (kvp.Value is bool httpValue)
-                            {
-                                config.HttpEnabled = httpValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_http"));
-                            }
-                            break;
-
-                        case "HttpsEnabled":
-                            if (kvp.Value is bool httpsValue)
-                            {
-                                config.HttpsEnabled = httpsValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_https"));
-                            }
-                            break;
-
-                        case "HttpsRedirectEnabled":
-                            if (kvp.Value is bool httpsRedirectValue)
-                            {
-                                config.HttpsRedirectEnabled = httpsRedirectValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_https_redirect"));
-                            }
-                            break;
-
-                        case "Notification":
-                            if (kvp.Value is bool notifyValue)
-                            {
-                                config.Notification = notifyValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_notification"));
-                            }
-                            break;
-
-                        case "AutoRestart":
-                            if (kvp.Value is bool restartValue)
-                            {
-                                config.AutoRestart = restartValue;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_auto_restart"));
-                            }
-                            break;
-
-                        case "MaxRestartAttempts":
-                            if (int.TryParse(kvp.Value?.ToString(), out var maxAttempts))
-                            {
-                                config.MaxRestartAttempts = maxAttempts;
-                                updatedFields.Add(I18nService.Instance.T("admin.field_max_restart_attempts"));
-                            }
-                            break;
-                    }
-                }
-
-                _configManager.SaveConfig(config);
-                _logger.LogInfo(I18nService.Instance.T("admin.settings_updated_log", string.Join(", ", updatedFields)));
-
-                return (I18nService.Instance.T("admin.settings_updated", string.Join(", ", updatedFields)), new { updatedFields });
+                return (I18nService.Instance.T("admin.settings_updated", "Config.yml"), null);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, I18nService.Instance.T("admin.settings_update_failed", ex.Message));
-                return (I18nService.Instance.T("admin.settings_update_failed", ex.Message), null);
+                _logger.LogError(ex, I18nService.Instance.T("admin.operation_failed", ex.Message));
+                return (I18nService.Instance.T("admin.operation_failed", ex.Message), null);
             }
         }
 
